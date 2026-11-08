@@ -1,0 +1,26 @@
+{
+  "name": "cardafin",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "license": "MIT",
+  "description": "Cardano wallet manager service layer: wallets, balances, ADA and native-token transfers, minting.",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --test 'src/**/*.test.ts'",
+    "typecheck": "tsc -p tsconfig.json",
+    "check": "npm run typecheck && npm test",
+    "cli": "node --experimental-strip-types --env-file-if-exists=.env src/cli.ts",
+    "serve": "node --experimental-strip-types --env-file-if-exists=.env src/http/server.ts"
+  },
+  "dependencies": {
+    "@lucid-evolution/lucid": "0.8.9",
+    "@blockfrost/blockfrost-js": "6.2.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "@types/node": "22.20.5"
+  }
+}
