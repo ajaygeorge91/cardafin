@@ -14,6 +14,7 @@
 //
 // Depends on core + ports only. See docs/ARCHITECTURE.md §5.
 
+import type { Lovelace } from "../core/ada.ts";
 import { CardafinError } from "../core/errors.ts";
 import type { PlanContext, PolicyInfo, TxPlan } from "../core/plan.ts";
 import {
@@ -40,6 +41,28 @@ import type { Config } from "../config.ts";
 import { assertMainnetAllowed } from "../config.ts";
 import type { TxRouter } from "./router.ts";
 
+export type TxKind = "send-ada" | "mint" | "send-tokens";
+
+/**
+ * What a transaction *would* do, without doing it. Returned by `preview` so
+ * a caller — the CLI, or an HTTP client — can show the plan, the network and
+ * the estimated cost and ask for confirmation before anything is signed.
+ *
+ * Note that `preview` and the subsequent write are two independent passes:
+ * the second one re-reads the balance, the slot and the parameters and plans
+ * again, so the transaction that is submitted is planned against the chain as
+ * it is at submit time, not as it was when the operator was reading the
+ * preview. The numbers can therefore differ slightly; the alternative —
+ * submitting a plan built against a stale tip — is worse, because a mint's
+ * validity window is computed from the slot.
+ */
+export type TxPreview = {
+  plan: TxPlan;
+  estimatedFee: Lovelace;
+  /** Minimum ADA each of `plan.outputs` must carry, in the same order. */
+  minAdaPerOutput: Lovelace[];
+};
+
 export type TxServiceDeps = {
   keys: KeyPort;
   chain: ChainReader;
@@ -64,13 +87,11 @@ export class TxService {
   }
 
   async sendAda(input: unknown, accountIndex = 0): Promise<TxReceipt> {
-    const req = unwrap(validateSendAda(input, this.#config.network));
-    return this.#submit(accountIndex, (ctx) => planSendAda(req, ctx));
+    return this.#submit(accountIndex, this.#planner("send-ada", input));
   }
 
   async sendTokens(input: unknown, accountIndex = 0): Promise<TxReceipt> {
-    const req = unwrap(validateSendTokens(input, this.#config.network));
-    return this.#submit(accountIndex, (ctx) => planSendTokens(req, ctx));
+    return this.#submit(accountIndex, this.#planner("send-tokens", input));
   }
 
   /**
@@ -81,8 +102,22 @@ export class TxService {
    * the policy id alone. A persisted registry is a later concern.
    */
   async mint(input: unknown, policy: PolicyInfo, accountIndex = 0): Promise<TxReceipt> {
-    const req = unwrap(validateMint(input, this.#config.network));
-    return this.#submit(accountIndex, (ctx) => planMint(req, policy, ctx));
+    return this.#submit(accountIndex, this.#planner("mint", input, policy));
+  }
+
+  /**
+   * Plan and price a transaction without submitting it. Same validation,
+   * same chain reads, same `checkFunds` and the same Mainnet gate as the
+   * write paths — it simply stops before the executor. `mint` needs its
+   * `policy`, like `mint()` does.
+   */
+  async preview(
+    kind: TxKind,
+    input: unknown,
+    accountIndex = 0,
+    policy?: PolicyInfo,
+  ): Promise<TxPreview> {
+    return this.#prepare(accountIndex, this.#planner(kind, input, policy));
   }
 
   /**
@@ -110,10 +145,49 @@ export class TxService {
     return { policyId, script, keyHash: wallet.paymentKeyHash, lockBeforeSlot };
   }
 
-  async #submit(
+  /**
+   * Validate the request now, and return the planner to run once the chain
+   * has been read. Validation is eager on purpose: a malformed address or a
+   * negative amount should fail before cardafin spends three round trips
+   * finding out what the chain looks like.
+   */
+  #planner(
+    kind: TxKind,
+    input: unknown,
+    policy?: PolicyInfo,
+  ): (ctx: PlanContext) => Result<TxPlan> {
+    switch (kind) {
+      case "send-ada": {
+        const req = unwrap(validateSendAda(input, this.#config.network));
+        return (ctx) => planSendAda(req, ctx);
+      }
+      case "send-tokens": {
+        const req = unwrap(validateSendTokens(input, this.#config.network));
+        return (ctx) => planSendTokens(req, ctx);
+      }
+      case "mint": {
+        if (policy === undefined) {
+          throw new CardafinError(
+            "INVALID_REQUEST",
+            "a mint needs the PolicyInfo it mints under; create one with createPolicy and keep the JSON",
+          );
+        }
+        const req = unwrap(validateMint(input, this.#config.network));
+        return (ctx) => planMint(req, policy, ctx);
+      }
+    }
+  }
+
+  /**
+   * Everything a write path does before the executor: derive the wallet,
+   * read the chain, plan, check funds, check Mainnet. Shared with `preview`,
+   * which is the point — a preview that took a different path through
+   * validation would be a preview of something else.
+   */
+  async #prepare(
     accountIndex: number,
     build: (ctx: PlanContext) => Result<TxPlan>,
-  ): Promise<TxReceipt> {
+  ): Promise<TxPreview> {
     const wallet = await this.#keys.deriveWallet(
       this.#config.mnemonic,
       accountIndex,
@@ -145,11 +219,24 @@ export class TxService {
 
     assertMainnetAllowed(this.#config);
 
+    return {
+      plan,
+      estimatedFee: funds.estimatedFee,
+      minAdaPerOutput: funds.minAdaPerOutput,
+    };
+  }
+
+  async #submit(
+    accountIndex: number,
+    build: (ctx: PlanContext) => Result<TxPlan>,
+  ): Promise<TxReceipt> {
+    const { plan, estimatedFee } = await this.#prepare(accountIndex, build);
+
     this.#log.info(describePlan(plan), {
       kind: plan.kind,
       route: plan.route,
       network: plan.network,
-      estimatedFee: funds.estimatedFee,
+      estimatedFee,
     });
 
     const receipt = await this.#router

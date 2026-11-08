@@ -36,12 +36,25 @@ export type WalletUtxosCommand = {
   json: boolean;
 };
 
+export type SendAdaCommand = {
+  kind: "send-ada";
+  to: string;
+  /** ADA as a decimal string, e.g. "1.5". Core parses it, not the CLI. */
+  amount: string;
+  account: number;
+  hydra: boolean;
+  /** Skip the confirmation prompt. Never skips the Mainnet gate in config. */
+  yes: boolean;
+  json: boolean;
+};
+
 export type Command =
   | HelpCommand
   | WalletNewCommand
   | WalletAddressCommand
   | WalletBalanceCommand
-  | WalletUtxosCommand;
+  | WalletUtxosCommand
+  | SendAdaCommand;
 
 export type CommandSpec = {
   /** The literal words that select this command, space-separated. */
@@ -72,6 +85,11 @@ export const COMMAND_SPECS: readonly CommandSpec[] = [
     usage: "wallet utxos [--account N | --address ADDR] [--json]",
     summary: "List the unspent outputs at an address.",
   },
+  {
+    name: "send-ada",
+    usage: "send-ada --to ADDR --amount ADA [--account N] [--hydra] [--yes]",
+    summary: "Send ADA. Shows the plan and the estimated fee, then confirms.",
+  },
 ];
 
 /**
@@ -83,7 +101,12 @@ const COMMON_OPTIONS = `Common options
   --account N      Account index of the master mnemonic (default 0).
   --address ADDR   Read an arbitrary address instead of a derived one.
   --json           Machine-readable output on stdout.
-  -h, --help       This text.`;
+  -h, --help       This text.
+
+Write-command options
+  --hydra          Route through a Hydra head (designed, not built: refuses).
+  --yes            Skip the confirmation prompt. On Mainnet the prompt still
+                   has to be answered with the word Mainnet.`;
 
 const ENV_SUMMARY = `Environment (see .env.example; loaded from .env by \`npm run cli\`)
   CARDAFIN_NETWORK           Preview | Preprod | Mainnet (default Preview).
@@ -142,6 +165,10 @@ const BASE_OPTIONS: Record<string, OptionSpec> = {
 };
 
 const ACCOUNT_OPTION: Record<string, OptionSpec> = { account: { type: "string" } };
+const WRITE_OPTIONS: Record<string, OptionSpec> = {
+  hydra: { type: "boolean" },
+  yes: { type: "boolean" },
+};
 const ADDRESS_OPTION: Record<string, OptionSpec> = { address: { type: "string" } };
 
 function readFlags(
@@ -281,6 +308,8 @@ export function parseCliArgs(argv: readonly string[]): Result<Command> {
       return walletTarget("wallet-balance", rest);
     case "wallet utxos":
       return walletTarget("wallet-utxos", rest);
+    case "send-ada":
+      return sendAda(rest);
     default:
       // Unreachable while COMMAND_SPECS and this switch agree; a new spec
       // without a branch should fail loudly rather than parse as something.
@@ -338,4 +367,39 @@ function walletTarget(
     return ok({ kind, account: account.value, address: required.value, json });
   }
   return ok({ kind, account: account.value, json });
+}
+
+function sendAda(rest: readonly string[]): Result<Command> {
+  const values = readFlags(rest, {
+    ...ACCOUNT_OPTION,
+    ...WRITE_OPTIONS,
+    to: { type: "string" },
+    amount: { type: "string" },
+  });
+  if (!values.ok) {
+    return values;
+  }
+  const to = requireString(values.value, "to");
+  if (!to.ok) {
+    return to;
+  }
+  const amount = requireString(values.value, "amount");
+  if (!amount.ok) {
+    return amount;
+  }
+  const account = parseAccount(values.value);
+  if (!account.ok) {
+    return account;
+  }
+  return ok({
+    kind: "send-ada",
+    to: to.value,
+    // Left as a string for `core/requests.ts` to parse: ADA has six decimals
+    // and no float should ever touch an amount.
+    amount: amount.value,
+    account: account.value,
+    hydra: boolFlag(values.value, "hydra"),
+    yes: boolFlag(values.value, "yes"),
+    json: boolFlag(values.value, "json"),
+  });
 }

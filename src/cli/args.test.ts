@@ -188,3 +188,79 @@ test("a flag with no command is an error that asks for a command", () => {
 test("`wallet` on its own is unknown: there is no bare wallet command", () => {
   assert.match(reject("wallet"), /unknown command "wallet"/);
 });
+
+// --- send-ada -------------------------------------------------------------
+
+test("send-ada parses its required flags", () => {
+  assert.deepEqual(parse("send-ada", "--to", "addr_test1abc", "--amount", "1.5"), {
+    kind: "send-ada",
+    to: "addr_test1abc",
+    amount: "1.5",
+    account: 0,
+    hydra: false,
+    yes: false,
+    json: false,
+  });
+});
+
+test("send-ada takes account, hydra, yes and json", () => {
+  assert.deepEqual(
+    parse(
+      "send-ada",
+      "--to=addr_test1abc",
+      "--amount=2",
+      "--account=4",
+      "--hydra",
+      "--yes",
+      "--json",
+    ),
+    {
+      kind: "send-ada",
+      to: "addr_test1abc",
+      amount: "2",
+      account: 4,
+      hydra: true,
+      yes: true,
+      json: true,
+    },
+  );
+});
+
+test("send-ada needs both --to and --amount", () => {
+  assert.match(reject("send-ada", "--amount", "1"), /--to is required/);
+  assert.match(reject("send-ada", "--to", "addr_test1abc"), /--amount is required/);
+  assert.match(reject("send-ada"), /--to is required/);
+});
+
+test("an empty --to or --amount is rejected rather than passed on as \"\"", () => {
+  assert.match(reject("send-ada", "--to=", "--amount=1"), /--to is required/);
+  assert.match(reject("send-ada", "--to=addr_test1abc", "--amount="), /--amount is required/);
+});
+
+test("the amount is kept as a string for core to parse, not turned into a float", () => {
+  const cmd = parse("send-ada", "--to=addr_test1abc", "--amount=0.100000");
+  assert.equal(cmd.kind === "send-ada" ? cmd.amount : undefined, "0.100000");
+  // Nonsense amounts are core's business to reject, with the right error
+  // code; the CLI must not guess at them.
+  const odd = parse("send-ada", "--to=addr_test1abc", "--amount=banana");
+  assert.equal(odd.kind === "send-ada" ? odd.amount : undefined, "banana");
+});
+
+test("send-ada rejects wallet-only options", () => {
+  assert.match(reject("send-ada", "--to=a", "--amount=1", "--address=b"), /address/);
+});
+
+test("send-ada needs config", () => {
+  assert.equal(
+    needsConfig({
+      kind: "send-ada",
+      to: "a",
+      amount: "1",
+      account: 0,
+      hydra: false,
+      yes: false,
+      json: false,
+    }),
+    true,
+  );
+});

@@ -14,6 +14,7 @@ import { METADATA_LABEL_CIP25 } from "../core/metadata.ts";
 import type { Network } from "../core/network.ts";
 import { blockfrostUrl } from "../core/network.ts";
 import type { PolicyInfo } from "../core/plan.ts";
+import { describePlan } from "../core/plan.ts";
 import { DEFAULT_POLICY_LOCK_SECONDS } from "../core/requests.ts";
 import { unwrap } from "../core/result.ts";
 import type { LogLevel } from "../ports/logger.ts";
@@ -460,6 +461,177 @@ test("11. Mainnet needs the confirm token, and then behaves like any network", a
   });
   await assert.rejects(
     () => unguarded.sendAda({ to: other.address, amount: "2" }),
+    expectCode("MAINNET_NOT_CONFIRMED"),
+  );
+});
+
+// --- 12. preview ----------------------------------------------------------
+
+test("12. preview plans and prices a send without submitting anything", async () => {
+  const { tx, ledger, wallet, lines } = wire();
+  const me = await wallet.address(0);
+  const other = await wallet.address(1);
+  ledger.fund(me.address, { [LOVELACE]: TEN_ADA });
+
+  const preview = await tx.preview("send-ada", { to: other.address, amount: "2" });
+
+  assert.equal(preview.plan.kind, "send-ada");
+  assert.equal(preview.plan.route, "l1");
+  assert.equal(preview.plan.network, "Preview");
+  assert.equal(preview.plan.from, me.address);
+  assert.deepEqual(preview.plan.outputs, [
+    { address: other.address, assets: { [LOVELACE]: 2_000_000n } },
+  ]);
+  assert.ok(preview.estimatedFee > 0n, "a preview must carry a fee estimate");
+  assert.equal(preview.minAdaPerOutput.length, 1);
+  assert.ok((preview.minAdaPerOutput[0] ?? 0n) > 0n);
+
+  // The whole point: nothing moved, nothing was submitted, nothing logged a
+  // receipt. A preview is a read.
+  assert.equal(lovelaceOf(await ledger.getBalance(me.address)), TEN_ADA);
+  assert.equal(lovelaceOf(await ledger.getBalance(other.address)), 0n);
+  assert.deepEqual(ledger.history, []);
+  assert.equal(lines.some((l) => l.msg === "submitted"), false);
+  assertNoSecrets(lines);
+});
+
+test("12. the previewed fee is what the send then charges", async () => {
+  const { tx, ledger, wallet } = wire();
+  const me = await wallet.address(0);
+  const other = await wallet.address(1);
+  ledger.fund(me.address, { [LOVELACE]: TEN_ADA });
+
+  const preview = await tx.preview("send-ada", { to: other.address, amount: "2" });
+  const receipt = await tx.sendAda({ to: other.address, amount: "2" });
+
+  // MemoryLedger charges core's estimate for the same shape, so these agree
+  // exactly here. Against a real node the receipt holds the node's number.
+  assert.equal(receipt.fee, preview.estimatedFee);
+  assert.equal(describePlan(preview.plan), describePlan(ledger.lastPlan ?? preview.plan));
+});
+
+test("12. preview rejects what the send would reject, at the same stage", async () => {
+  const { tx, ledger, wallet } = wire();
+  const me = await wallet.address(0);
+  const other = await wallet.address(1);
+  ledger.fund(me.address, { [LOVELACE]: 3_000_000n });
+
+  // Validation: a malformed address never reaches the chain reads.
+  await assert.rejects(
+    () => tx.preview("send-ada", { to: "not-an-address", amount: "1" }),
+    expectCode("INVALID_ADDRESS"),
+  );
+  // Funds: the estimate includes the fee, so 3 ADA cannot send 3 ADA.
+  await assert.rejects(
+    () => tx.preview("send-ada", { to: other.address, amount: "3" }),
+    expectCode("INSUFFICIENT_FUNDS"),
+  );
+  // Min-ADA: a dust output is refused before it can be priced.
+  await assert.rejects(
+    () => tx.preview("send-ada", { to: other.address, amount: "0.1" }),
+    expectCode("BELOW_MIN_ADA"),
+  );
+  assert.deepEqual(ledger.history, []);
+  assert.ok(me.address.startsWith("addr_test1"));
+});
+
+test("12. preview of a mint carries the validity window, the mint and the metadata", async () => {
+  const { tx, ledger, wallet } = wire();
+  const me = await wallet.address(0);
+  ledger.fund(me.address, { [LOVELACE]: TEN_ADA });
+  const policy = await tx.createPolicy({ lockInSeconds: 3_600 });
+  const unit = unwrap(toUnit(policy.policyId, unwrap(assetNameToHex("CARDAFIN"))));
+
+  const preview = await tx.preview(
+    "mint",
+    {
+      policyId: policy.policyId,
+      assetName: "CARDAFIN",
+      quantity: "1000",
+      cip25: { name: "Cardafin" },
+    },
+    0,
+    policy,
+  );
+
+  assert.equal(preview.plan.kind, "mint");
+  assert.deepEqual(preview.plan.mint?.assets, { [unit]: 1_000n });
+  assert.equal(preview.plan.mint?.policyId, policy.policyId);
+  assert.ok(preview.plan.validToSlot !== undefined);
+  assert.ok((preview.plan.validToSlot ?? 0) < (policy.lockBeforeSlot ?? 0));
+  assert.equal(preview.plan.metadata?.[0]?.label, METADATA_LABEL_CIP25);
+  assert.equal(ledger.mintedSupply(unit), 0n, "a previewed mint mints nothing");
+});
+
+test("12. preview of a mint with no policy is INVALID_REQUEST, not a crash", async () => {
+  const { tx, ledger, wallet } = wire();
+  const me = await wallet.address(0);
+  ledger.fund(me.address, { [LOVELACE]: TEN_ADA });
+  await assert.rejects(
+    () =>
+      tx.preview("mint", {
+        policyId: "ff".repeat(28),
+        assetName: "CARDAFIN",
+        quantity: "1",
+      }),
+    expectCode("INVALID_REQUEST", /needs the PolicyInfo/),
+  );
+});
+
+test("12. preview of a token send prices the recipient's min-ADA", async () => {
+  const { tx, ledger, other, unit } = await mintedHarness();
+
+  const preview = await tx.preview("send-tokens", {
+    to: other.address,
+    assets: { [unit]: "400" },
+  });
+
+  assert.equal(preview.plan.kind, "send-tokens");
+  const output = preview.plan.outputs[0];
+  assert.ok(output);
+  assert.equal(output.assets[unit], 400n);
+  assert.equal(output.assets[LOVELACE], preview.minAdaPerOutput[0]);
+  assert.equal(ledger.history.length, 1, "only the mint; the preview submitted nothing");
+});
+
+test("12. preview honours the hydra flag without reaching the executor", async () => {
+  const { tx, ledger, wallet } = wire({ hydra: true });
+  const me = await wallet.address(0);
+  const other = await wallet.address(1);
+  ledger.fund(me.address, { [LOVELACE]: TEN_ADA });
+
+  const preview = await tx.preview("send-ada", {
+    to: other.address,
+    amount: "2",
+    hydra: true,
+  });
+  // The route is a planning decision; `HydraExecutor` would have thrown
+  // NOT_IMPLEMENTED, which is exactly why a preview is useful here.
+  assert.equal(preview.plan.route, "hydra");
+  await assert.rejects(
+    () => tx.sendAda({ to: other.address, amount: "2", hydra: true }),
+    expectCode("NOT_IMPLEMENTED"),
+  );
+});
+
+test("12. preview is behind the Mainnet gate too", async () => {
+  const keys = new MemoryKeys();
+  const config = { ...configFor("Mainnet"), mainnetConfirmed: false };
+  const ledger = new MemoryLedger("Mainnet", { slot: START_SLOT, keys });
+  const me = await keys.deriveWallet(config.mnemonic, 0, "Mainnet");
+  const other = await keys.deriveWallet(config.mnemonic, 1, "Mainnet");
+  ledger.fund(me.address, { [LOVELACE]: TEN_ADA });
+
+  const tx = new TxService({
+    keys,
+    chain: ledger,
+    router: new TxRouter({ l1: ledger }),
+    config,
+    log: createLogger({ secrets: secretsOf(config), sink: () => {} }),
+  });
+
+  await assert.rejects(
+    () => tx.preview("send-ada", { to: other.address, amount: "2" }),
     expectCode("MAINNET_NOT_CONFIRMED"),
   );
 });

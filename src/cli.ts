@@ -16,18 +16,24 @@
 // See docs/ARCHITECTURE.md §8 (steps 5–7).
 
 import process from "node:process";
+import { createInterface } from "node:readline";
 
 import type { App } from "./app.ts";
 import { createApp } from "./app.ts";
 import { LucidKeys } from "./adapters/lucid/keys.ts";
 import type { Command } from "./cli/args.ts";
 import { helpText, needsConfig, parseCliArgs } from "./cli/args.ts";
-import { lovelaceToAda } from "./core/ada.ts";
+import { formatAda, lovelaceToAda } from "./core/ada.ts";
 import type { Assets } from "./core/assets.ts";
 import { LOVELACE, lovelaceOf } from "./core/assets.ts";
-import { isCardafinError } from "./core/errors.ts";
+import { CardafinError, isCardafinError } from "./core/errors.ts";
+import { describePlan } from "./core/plan.ts";
+import type { Network } from "./core/network.ts";
+import { isMainnet } from "./core/network.ts";
 import type { Config } from "./config.ts";
 import { loadConfig } from "./config.ts";
+import type { TxPreview } from "./services/tx.ts";
+import type { TxReceipt } from "./ports/executor.ts";
 import { tokensOf } from "./services/wallet.ts";
 
 /** Exit 1: the command failed. Exit 2: cardafin is misconfigured. */
@@ -72,6 +78,76 @@ function renderAssets(assets: Assets): string {
     return ada;
   }
   return [ada, ...tokens.map((t) => `${t.quantity} ${t.assetName || t.unit}`)].join(" + ");
+}
+
+// --- confirmation ---------------------------------------------------------
+
+/**
+ * Prompts and plan summaries go to **stderr**, not stdout. They are
+ * interstitial UI; stdout carries the receipt, so `send-ada --json | jq`
+ * still works and a piped run is not corrupted by a question.
+ */
+async function ask(question: string): Promise<string> {
+  const rl = createInterface({ input: process.stdin, output: process.stderr });
+  try {
+    return await new Promise<string>((resolve) => {
+      rl.question(question, resolve);
+    });
+  } finally {
+    rl.close();
+  }
+}
+
+/**
+ * The human gate in front of every write. `--yes` skips it on a testnet,
+ * which is what makes the CLI scriptable. It does *not* skip it on Mainnet:
+ * there the operator has to type the word, because a `--yes` that someone
+ * copied out of a Preview runbook must not move real money.
+ */
+async function confirm(network: Network, yes: boolean): Promise<boolean> {
+  if (isMainnet(network)) {
+    const answer = await ask(
+      'This moves REAL FUNDS on Mainnet. Type "Mainnet" to proceed, anything else to abort: ',
+    );
+    return answer.trim() === "Mainnet";
+  }
+  if (yes) {
+    return true;
+  }
+  const answer = await ask("Proceed? [y/N] ");
+  return /^(y|yes)$/i.test(answer.trim());
+}
+
+function printPreview(preview: TxPreview, config: Config): void {
+  errOut(describePlan(preview.plan));
+  errOut(
+    renderFields([
+      ["network", config.network],
+      ["route", preview.plan.route],
+      ["from", preview.plan.from],
+      ["estimated fee", formatAda(preview.estimatedFee)],
+    ]),
+  );
+}
+
+function printReceipt(receipt: TxReceipt, command: { json: boolean }): void {
+  if (command.json) {
+    out(json(receipt));
+    return;
+  }
+  out(
+    renderFields([
+      ["tx hash", receipt.txHash],
+      ["fee", formatAda(receipt.fee)],
+      ["route", receipt.route],
+      ...(receipt.explorerUrl ? [["explorer", receipt.explorerUrl] as [string, string]] : []),
+    ]),
+  );
+}
+
+/** Thrown when the operator declines at the prompt. Exit 1, no transaction. */
+function aborted(): CardafinError {
+  return new CardafinError("INVALID_REQUEST", "aborted: not confirmed");
 }
 
 // --- commands -------------------------------------------------------------
@@ -179,6 +255,32 @@ async function walletUtxos(
   out(`${utxos.length} unspent output${utxos.length === 1 ? "" : "s"}`);
 }
 
+async function sendAda(
+  app: App,
+  config: Config,
+  command: {
+    to: string;
+    amount: string;
+    account: number;
+    hydra: boolean;
+    yes: boolean;
+    json: boolean;
+  },
+): Promise<void> {
+  const request = { to: command.to, amount: command.amount, hydra: command.hydra };
+
+  // Preview first: validate, read the chain, plan, price, check funds — all
+  // without signing anything. Then confirm. Then the service plans again
+  // against the tip as it is at submit time (see `TxService.preview`).
+  const preview = await app.tx.preview("send-ada", request, command.account);
+  printPreview(preview, config);
+  if (!(await confirm(config.network, command.yes))) {
+    throw aborted();
+  }
+
+  printReceipt(await app.tx.sendAda(request, command.account), command);
+}
+
 // --- dispatch -------------------------------------------------------------
 
 /** The two commands that must work with no `.env` at all. */
@@ -199,6 +301,8 @@ async function runWithConfig(command: Command, config: Config): Promise<void> {
       return walletBalance(app, config, command);
     case "wallet-utxos":
       return walletUtxos(app, config, command);
+    case "send-ada":
+      return sendAda(app, config, command);
     default:
       // `needsConfig` already routed help and `wallet new` elsewhere.
       return runWithoutConfig(command);
