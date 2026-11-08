@@ -15,6 +15,7 @@
 //
 // See docs/ARCHITECTURE.md §8 (steps 5–7).
 
+import { readFile, writeFile } from "node:fs/promises";
 import process from "node:process";
 import { createInterface } from "node:readline";
 
@@ -27,7 +28,10 @@ import { formatAda, lovelaceToAda } from "./core/ada.ts";
 import type { Assets } from "./core/assets.ts";
 import { LOVELACE, lovelaceOf } from "./core/assets.ts";
 import { CardafinError, isCardafinError } from "./core/errors.ts";
+import type { PolicyInfo } from "./core/plan.ts";
 import { describePlan } from "./core/plan.ts";
+import { validateNativeScript } from "./core/native-script.ts";
+import { validatePolicyId } from "./core/assets.ts";
 import type { Network } from "./core/network.ts";
 import { isMainnet } from "./core/network.ts";
 import type { Config } from "./config.ts";
@@ -281,6 +285,172 @@ async function sendAda(
   printReceipt(await app.tx.sendAda(request, command.account), command);
 }
 
+async function policyNew(
+  app: App,
+  config: Config,
+  command: {
+    lockSeconds?: number;
+    lockBeforeSlot?: number;
+    account: number;
+    out?: string;
+    json: boolean;
+  },
+): Promise<void> {
+  const request: { lockBeforeSlot?: number; lockInSeconds?: number } = {};
+  if (command.lockBeforeSlot !== undefined) {
+    request.lockBeforeSlot = command.lockBeforeSlot;
+  } else if (command.lockSeconds !== undefined) {
+    request.lockInSeconds = command.lockSeconds;
+  }
+
+  const policy = await app.tx.createPolicy(request, command.account);
+  const document = json(policy);
+
+  if (command.out !== undefined) {
+    await writeFile(command.out, `${document}\n`, "utf8");
+    if (command.json) {
+      out(json({ ...policy, writtenTo: command.out }));
+      return;
+    }
+    out(
+      renderFields([
+        ["policy id", policy.policyId],
+        ["key hash", policy.keyHash],
+        ["locks before slot", String(policy.lockBeforeSlot ?? "never")],
+        ["written to", command.out],
+        ["network", config.network],
+      ]),
+    );
+    errOut(
+      "Keep this file. The script cannot be recovered from the policy id, and without it the policy can never mint or burn again.",
+    );
+    return;
+  }
+
+  // No --out: the JSON itself is the deliverable, so it goes to stdout
+  // whether or not --json was given. It holds no secret — a policy id, a
+  // native script, a public key hash and a slot.
+  out(document);
+  errOut(
+    "Save that JSON. Without the script the policy can never mint or burn again.",
+  );
+}
+
+/**
+ * Read a PolicyInfo back off disk, and *validate it* rather than trusting it.
+ * The file is ordinary user input by the time it comes back: it may have been
+ * hand-edited, truncated or produced by a different tool, and a malformed
+ * script would otherwise reach the executor as an unexplained failure.
+ */
+async function loadPolicy(path: string): Promise<PolicyInfo> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(path, "utf8"));
+  } catch (e) {
+    throw new CardafinError(
+      "INVALID_REQUEST",
+      `could not read the policy file ${path}: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new CardafinError("INVALID_REQUEST", `${path} is not a PolicyInfo JSON object`);
+  }
+  const body = parsed as Record<string, unknown>;
+  const policyId = validatePolicyId(String(body.policyId ?? ""));
+  if (!policyId.ok) {
+    throw policyId.error;
+  }
+  const script = validateNativeScript(body.script);
+  if (!script.ok) {
+    throw script.error;
+  }
+  const keyHash = typeof body.keyHash === "string" ? body.keyHash : "";
+  const policy: PolicyInfo = {
+    policyId: policyId.value,
+    script: script.value,
+    keyHash,
+  };
+  if (typeof body.lockBeforeSlot === "number") {
+    policy.lockBeforeSlot = body.lockBeforeSlot;
+  }
+  return policy;
+}
+
+async function mint(
+  app: App,
+  config: Config,
+  command: {
+    policy: string;
+    name: string;
+    quantity: string;
+    to?: string;
+    cip25Name?: string;
+    cip25Image?: string;
+    cip25Description?: string;
+    account: number;
+    hydra: boolean;
+    yes: boolean;
+    json: boolean;
+  },
+): Promise<void> {
+  const policy = await loadPolicy(command.policy);
+
+  const cip25: Record<string, string> = {};
+  if (command.cip25Name !== undefined) {
+    cip25.name = command.cip25Name;
+  }
+  if (command.cip25Image !== undefined) {
+    cip25.image = command.cip25Image;
+  }
+  if (command.cip25Description !== undefined) {
+    cip25.description = command.cip25Description;
+  }
+
+  const request = {
+    policyId: policy.policyId,
+    assetName: command.name,
+    quantity: command.quantity,
+    hydra: command.hydra,
+    ...(command.to !== undefined ? { to: command.to } : {}),
+    ...(Object.keys(cip25).length > 0 ? { cip25 } : {}),
+  };
+
+  const preview = await app.tx.preview("mint", request, command.account, policy);
+  printPreview(preview, config);
+  if (!(await confirm(config.network, command.yes))) {
+    throw aborted();
+  }
+
+  printReceipt(await app.tx.mint(request, policy, command.account), command);
+}
+
+async function sendTokens(
+  app: App,
+  config: Config,
+  command: {
+    to: string;
+    assets: Array<{ unit: string; quantity: string }>;
+    account: number;
+    hydra: boolean;
+    yes: boolean;
+    json: boolean;
+  },
+): Promise<void> {
+  const assets: Record<string, string> = {};
+  for (const asset of command.assets) {
+    assets[asset.unit] = asset.quantity;
+  }
+  const request = { to: command.to, assets, hydra: command.hydra };
+
+  const preview = await app.tx.preview("send-tokens", request, command.account);
+  printPreview(preview, config);
+  if (!(await confirm(config.network, command.yes))) {
+    throw aborted();
+  }
+
+  printReceipt(await app.tx.sendTokens(request, command.account), command);
+}
+
 // --- dispatch -------------------------------------------------------------
 
 /** The two commands that must work with no `.env` at all. */
@@ -303,6 +473,12 @@ async function runWithConfig(command: Command, config: Config): Promise<void> {
       return walletUtxos(app, config, command);
     case "send-ada":
       return sendAda(app, config, command);
+    case "policy-new":
+      return policyNew(app, config, command);
+    case "mint":
+      return mint(app, config, command);
+    case "send-tokens":
+      return sendTokens(app, config, command);
     default:
       // `needsConfig` already routed help and `wallet new` elsewhere.
       return runWithoutConfig(command);

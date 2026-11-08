@@ -264,3 +264,198 @@ test("send-ada needs config", () => {
     true,
   );
 });
+
+// --- policy new -----------------------------------------------------------
+
+test("policy new defaults to no explicit lock and stdout", () => {
+  assert.deepEqual(parse("policy", "new"), {
+    kind: "policy-new",
+    account: 0,
+    json: false,
+  });
+});
+
+test("policy new takes a relative or an absolute lock, never both", () => {
+  assert.deepEqual(parse("policy", "new", "--lock-seconds", "3600"), {
+    kind: "policy-new",
+    account: 0,
+    json: false,
+    lockSeconds: 3600,
+  });
+  assert.deepEqual(parse("policy", "new", "--lock-before-slot=90000000"), {
+    kind: "policy-new",
+    account: 0,
+    json: false,
+    lockBeforeSlot: 90_000_000,
+  });
+  assert.match(
+    reject("policy", "new", "--lock-seconds=10", "--lock-before-slot=20"),
+    /mutually exclusive/,
+  );
+});
+
+test("a zero or negative lock is rejected: a policy that is already shut is useless", () => {
+  assert.match(reject("policy", "new", "--lock-seconds=0"), /positive whole number/);
+  assert.match(reject("policy", "new", "--lock-seconds=-5"), /lock-seconds/);
+  assert.match(reject("policy", "new", "--lock-before-slot=abc"), /positive whole number/);
+});
+
+test("policy new --out takes a path", () => {
+  assert.deepEqual(parse("policy", "new", "--out", "policy.json", "--account=2"), {
+    kind: "policy-new",
+    account: 2,
+    json: false,
+    out: "policy.json",
+  });
+  assert.match(reject("policy", "new", "--out="), /--out must be a file path/);
+});
+
+test("`policy` on its own is unknown", () => {
+  assert.match(reject("policy"), /unknown command "policy"/);
+});
+
+// --- mint -----------------------------------------------------------------
+
+test("mint needs a policy file, a name and a quantity", () => {
+  assert.deepEqual(parse("mint", "--policy=p.json", "--name=CARDAFIN", "--quantity=1000"), {
+    kind: "mint",
+    policy: "p.json",
+    name: "CARDAFIN",
+    quantity: "1000",
+    account: 0,
+    hydra: false,
+    yes: false,
+    json: false,
+  });
+  assert.match(reject("mint", "--name=X", "--quantity=1"), /--policy is required/);
+  assert.match(reject("mint", "--policy=p.json", "--quantity=1"), /--name is required/);
+  assert.match(reject("mint", "--policy=p.json", "--name=X"), /--quantity is required/);
+});
+
+test("a mint quantity stays a string so core can reject a non-integer with INVALID_AMOUNT", () => {
+  const cmd = parse("mint", "--policy=p.json", "--name=X", "--quantity=-5");
+  assert.equal(cmd.kind === "mint" ? cmd.quantity : undefined, "-5");
+});
+
+test("mint takes a recipient and the three CIP-25 fields", () => {
+  assert.deepEqual(
+    parse(
+      "mint",
+      "--policy=p.json",
+      "--name=CARDAFIN",
+      "--quantity=1",
+      "--to=addr_test1abc",
+      "--cip25-name=Cardafin",
+      "--cip25-image=ipfs://QmHash",
+      "--cip25-description=A test token",
+      "--account=3",
+      "--hydra",
+      "--yes",
+      "--json",
+    ),
+    {
+      kind: "mint",
+      policy: "p.json",
+      name: "CARDAFIN",
+      quantity: "1",
+      to: "addr_test1abc",
+      cip25Name: "Cardafin",
+      cip25Image: "ipfs://QmHash",
+      cip25Description: "A test token",
+      account: 3,
+      hydra: true,
+      yes: true,
+      json: true,
+    },
+  );
+});
+
+test("a CIP-25 image or description with no name is rejected: CIP-25 requires a name", () => {
+  assert.match(
+    reject("mint", "--policy=p.json", "--name=X", "--quantity=1", "--cip25-image=ipfs://Q"),
+    /CIP-25 requires a name/,
+  );
+  assert.match(
+    reject("mint", "--policy=p.json", "--name=X", "--quantity=1", "--cip25-description=d"),
+    /CIP-25 requires a name/,
+  );
+});
+
+// --- send-tokens ----------------------------------------------------------
+
+const POLICY_ID = "d27197682d71905c087c5c3b61b10e6d746db0b9bef351014d75bb26";
+const UNIT_A = `${POLICY_ID}6361726461666` + "96e";
+const UNIT_B = `${POLICY_ID}6f74686572`;
+
+test("send-tokens parses one --asset", () => {
+  assert.deepEqual(parse("send-tokens", "--to=addr_test1abc", `--asset=${UNIT_A}=400`), {
+    kind: "send-tokens",
+    to: "addr_test1abc",
+    assets: [{ unit: UNIT_A, quantity: "400" }],
+    account: 0,
+    hydra: false,
+    yes: false,
+    json: false,
+  });
+});
+
+test("--asset repeats, keeping order", () => {
+  const cmd = parse(
+    "send-tokens",
+    "--to=addr_test1abc",
+    `--asset=${UNIT_A}=1`,
+    `--asset=${UNIT_B}=2`,
+  );
+  assert.deepEqual(cmd.kind === "send-tokens" ? cmd.assets : [], [
+    { unit: UNIT_A, quantity: "1" },
+    { unit: UNIT_B, quantity: "2" },
+  ]);
+});
+
+test("send-tokens needs --to and at least one --asset", () => {
+  assert.match(reject("send-tokens", `--asset=${UNIT_A}=1`), /--to is required/);
+  assert.match(reject("send-tokens", "--to=addr_test1abc"), /--asset UNIT=QTY is required/);
+});
+
+test("a malformed --asset is rejected rather than half-parsed", () => {
+  for (const bad of [UNIT_A, `${UNIT_A}=`, `=400`, "="]) {
+    assert.match(
+      reject("send-tokens", "--to=addr_test1abc", `--asset=${bad}`),
+      /--asset must be UNIT=QUANTITY/,
+      `--asset=${bad} should be rejected`,
+    );
+  }
+});
+
+test("the same unit given twice is an error, not a silent sum or overwrite", () => {
+  assert.match(
+    reject(
+      "send-tokens",
+      "--to=addr_test1abc",
+      `--asset=${UNIT_A}=1`,
+      `--asset=${UNIT_A}=2`,
+    ),
+    /was given twice/,
+  );
+});
+
+test("only the first = splits a unit from its quantity", () => {
+  // Quantities are validated by core, not here; the split must not eat one.
+  const cmd = parse("send-tokens", "--to=a", `--asset=${UNIT_A}=1=2`);
+  assert.deepEqual(cmd.kind === "send-tokens" ? cmd.assets : [], [
+    { unit: UNIT_A, quantity: "1=2" },
+  ]);
+});
+
+test("every write command needs config and appears in the help text", () => {
+  const text = helpText();
+  for (const name of ["send-ada", "policy new", "mint", "send-tokens"]) {
+    assert.ok(
+      COMMAND_SPECS.some((c) => c.name === name),
+      `${name} is missing from COMMAND_SPECS`,
+    );
+    assert.ok(text.includes(name), `${name} is missing from the help text`);
+  }
+  assert.match(text, /--asset UNIT=QTY/);
+  assert.match(text, /--lock-before-slot/);
+});

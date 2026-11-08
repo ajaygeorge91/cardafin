@@ -48,13 +48,56 @@ export type SendAdaCommand = {
   json: boolean;
 };
 
+export type PolicyNewCommand = {
+  kind: "policy-new";
+  /** Lock the policy this many seconds from the current slot. */
+  lockSeconds?: number;
+  /** Absolute lock slot; takes precedence over `lockSeconds`. */
+  lockBeforeSlot?: number;
+  account: number;
+  /** Write the PolicyInfo JSON here instead of to stdout. */
+  out?: string;
+  json: boolean;
+};
+
+export type AssetAmount = { unit: string; quantity: string };
+
+export type MintCommand = {
+  kind: "mint";
+  /** Path to a PolicyInfo JSON file, as written by `policy new --out`. */
+  policy: string;
+  name: string;
+  quantity: string;
+  to?: string;
+  cip25Name?: string;
+  cip25Image?: string;
+  cip25Description?: string;
+  account: number;
+  hydra: boolean;
+  yes: boolean;
+  json: boolean;
+};
+
+export type SendTokensCommand = {
+  kind: "send-tokens";
+  to: string;
+  assets: AssetAmount[];
+  account: number;
+  hydra: boolean;
+  yes: boolean;
+  json: boolean;
+};
+
 export type Command =
   | HelpCommand
   | WalletNewCommand
   | WalletAddressCommand
   | WalletBalanceCommand
   | WalletUtxosCommand
-  | SendAdaCommand;
+  | SendAdaCommand
+  | PolicyNewCommand
+  | MintCommand
+  | SendTokensCommand;
 
 export type CommandSpec = {
   /** The literal words that select this command, space-separated. */
@@ -90,6 +133,22 @@ export const COMMAND_SPECS: readonly CommandSpec[] = [
     usage: "send-ada --to ADDR --amount ADA [--account N] [--hydra] [--yes]",
     summary: "Send ADA. Shows the plan and the estimated fee, then confirms.",
   },
+  {
+    name: "policy new",
+    usage: "policy new [--lock-seconds S | --lock-before-slot SLOT] [--out FILE]",
+    summary:
+      "Create a time-locked minting policy and print its JSON. Keep that file.",
+  },
+  {
+    name: "mint",
+    usage: "mint --policy FILE --name NAME --quantity Q [--to ADDR] [--yes]",
+    summary: "Mint (or, with a negative quantity, burn) under a saved policy.",
+  },
+  {
+    name: "send-tokens",
+    usage: "send-tokens --to ADDR --asset UNIT=QTY [--asset ...] [--yes]",
+    summary: "Send native tokens. cardafin adds the recipient's min-ADA.",
+  },
 ];
 
 /**
@@ -106,7 +165,19 @@ const COMMON_OPTIONS = `Common options
 Write-command options
   --hydra          Route through a Hydra head (designed, not built: refuses).
   --yes            Skip the confirmation prompt. On Mainnet the prompt still
-                   has to be answered with the word Mainnet.`;
+                   has to be answered with the word Mainnet.
+
+Minting options
+  --policy FILE          PolicyInfo JSON from \`policy new\`. Required to mint.
+  --name NAME            Asset name, at most 32 UTF-8 bytes.
+  --quantity Q           Whole number; negative burns.
+  --cip25-name X         CIP-25 display name (label 721).
+  --cip25-image U        CIP-25 image URI, usually ipfs://...
+  --cip25-description D  CIP-25 description.
+  --asset UNIT=QTY       Repeatable, for \`send-tokens\`. UNIT is policyId+hex.
+  --lock-seconds S       \`policy new\`: lock the policy S seconds from now.
+  --lock-before-slot N   \`policy new\`: lock it at an absolute slot.
+  --out FILE             \`policy new\`: write the JSON here instead of stdout.`;
 
 const ENV_SUMMARY = `Environment (see .env.example; loaded from .env by \`npm run cli\`)
   CARDAFIN_NETWORK           Preview | Preprod | Mainnet (default Preview).
@@ -310,6 +381,12 @@ export function parseCliArgs(argv: readonly string[]): Result<Command> {
       return walletTarget("wallet-utxos", rest);
     case "send-ada":
       return sendAda(rest);
+    case "policy new":
+      return policyNew(rest);
+    case "mint":
+      return mint(rest);
+    case "send-tokens":
+      return sendTokens(rest);
     default:
       // Unreachable while COMMAND_SPECS and this switch agree; a new spec
       // without a branch should fail loudly rather than parse as something.
@@ -397,6 +474,204 @@ function sendAda(rest: readonly string[]): Result<Command> {
     // Left as a string for `core/requests.ts` to parse: ADA has six decimals
     // and no float should ever touch an amount.
     amount: amount.value,
+    account: account.value,
+    hydra: boolFlag(values.value, "hydra"),
+    yes: boolFlag(values.value, "yes"),
+    json: boolFlag(values.value, "json"),
+  });
+}
+
+/** A positive whole number flag, or undefined when absent. */
+function optionalCount(
+  values: FlagValues,
+  name: string,
+): Result<number | undefined> {
+  const raw = stringFlag(values, name);
+  if (raw === undefined) {
+    return ok(undefined);
+  }
+  if (!/^\d+$/.test(raw.trim())) {
+    return fail(
+      "INVALID_REQUEST",
+      `--${name} must be a positive whole number, got "${raw}"`,
+    );
+  }
+  const n = Number(raw.trim());
+  if (!Number.isSafeInteger(n) || n <= 0) {
+    return fail("INVALID_REQUEST", `--${name} must be a positive whole number`);
+  }
+  return ok(n);
+}
+
+function policyNew(rest: readonly string[]): Result<Command> {
+  const values = readFlags(rest, {
+    ...ACCOUNT_OPTION,
+    "lock-seconds": { type: "string" },
+    "lock-before-slot": { type: "string" },
+    out: { type: "string" },
+  });
+  if (!values.ok) {
+    return values;
+  }
+  const lockSeconds = optionalCount(values.value, "lock-seconds");
+  if (!lockSeconds.ok) {
+    return lockSeconds;
+  }
+  const lockBeforeSlot = optionalCount(values.value, "lock-before-slot");
+  if (!lockBeforeSlot.ok) {
+    return lockBeforeSlot;
+  }
+  if (lockSeconds.value !== undefined && lockBeforeSlot.value !== undefined) {
+    return fail(
+      "INVALID_REQUEST",
+      "--lock-seconds and --lock-before-slot are mutually exclusive: one is relative, the other absolute",
+    );
+  }
+  const account = parseAccount(values.value);
+  if (!account.ok) {
+    return account;
+  }
+  const out = stringFlag(values.value, "out");
+  if (out !== undefined && out.trim() === "") {
+    return fail("INVALID_REQUEST", "--out must be a file path");
+  }
+  return ok({
+    kind: "policy-new",
+    account: account.value,
+    json: boolFlag(values.value, "json"),
+    ...(lockSeconds.value !== undefined ? { lockSeconds: lockSeconds.value } : {}),
+    ...(lockBeforeSlot.value !== undefined
+      ? { lockBeforeSlot: lockBeforeSlot.value }
+      : {}),
+    ...(out !== undefined ? { out: out.trim() } : {}),
+  });
+}
+
+function mint(rest: readonly string[]): Result<Command> {
+  const values = readFlags(rest, {
+    ...ACCOUNT_OPTION,
+    ...WRITE_OPTIONS,
+    policy: { type: "string" },
+    name: { type: "string" },
+    quantity: { type: "string" },
+    to: { type: "string" },
+    "cip25-name": { type: "string" },
+    "cip25-image": { type: "string" },
+    "cip25-description": { type: "string" },
+  });
+  if (!values.ok) {
+    return values;
+  }
+  const policy = requireString(values.value, "policy");
+  if (!policy.ok) {
+    return policy;
+  }
+  const name = requireString(values.value, "name");
+  if (!name.ok) {
+    return name;
+  }
+  const quantity = requireString(values.value, "quantity");
+  if (!quantity.ok) {
+    return quantity;
+  }
+  const account = parseAccount(values.value);
+  if (!account.ok) {
+    return account;
+  }
+  const to = stringFlag(values.value, "to")?.trim();
+  if (to !== undefined && to === "") {
+    return fail("INVALID_REQUEST", "--to must be a non-empty address");
+  }
+  const cip25Name = stringFlag(values.value, "cip25-name");
+  const cip25Image = stringFlag(values.value, "cip25-image");
+  const cip25Description = stringFlag(values.value, "cip25-description");
+  if (cip25Name === undefined && (cip25Image !== undefined || cip25Description !== undefined)) {
+    // CIP-25 requires `name`; an image with no name is a metadata payload
+    // that wallets will not display, which is worse than refusing it.
+    return fail(
+      "INVALID_REQUEST",
+      "--cip25-image and --cip25-description need --cip25-name: CIP-25 requires a name",
+    );
+  }
+  return ok({
+    kind: "mint",
+    policy: policy.value,
+    name: name.value,
+    quantity: quantity.value,
+    account: account.value,
+    hydra: boolFlag(values.value, "hydra"),
+    yes: boolFlag(values.value, "yes"),
+    json: boolFlag(values.value, "json"),
+    ...(to !== undefined ? { to } : {}),
+    ...(cip25Name !== undefined ? { cip25Name } : {}),
+    ...(cip25Image !== undefined ? { cip25Image } : {}),
+    ...(cip25Description !== undefined ? { cip25Description } : {}),
+  });
+}
+
+/** `--asset UNIT=QTY`, repeatable. Split on the first "=" only. */
+function parseAssetFlags(values: FlagValues): Result<AssetAmount[]> {
+  const raw = values.asset;
+  const entries: string[] =
+    raw === undefined ? [] : Array.isArray(raw) ? raw.map(String) : [String(raw)];
+  if (entries.length === 0) {
+    return fail(
+      "INVALID_REQUEST",
+      "--asset UNIT=QTY is required at least once (UNIT is the 56-hex policy id followed by the asset name in hex)",
+    );
+  }
+  const assets: AssetAmount[] = [];
+  const seen = new Set<string>();
+  for (const entry of entries) {
+    const at = entry.indexOf("=");
+    if (at <= 0 || at === entry.length - 1) {
+      return fail(
+        "INVALID_REQUEST",
+        `--asset must be UNIT=QUANTITY, got "${entry}"`,
+      );
+    }
+    const unit = entry.slice(0, at).trim();
+    const quantity = entry.slice(at + 1).trim();
+    if (unit === "" || quantity === "") {
+      return fail("INVALID_REQUEST", `--asset must be UNIT=QUANTITY, got "${entry}"`);
+    }
+    if (seen.has(unit)) {
+      // Two quantities for one unit is ambiguous: summing and overwriting are
+      // both defensible, so neither is guessed.
+      return fail("INVALID_REQUEST", `--asset ${unit} was given twice`);
+    }
+    seen.add(unit);
+    assets.push({ unit, quantity });
+  }
+  return ok(assets);
+}
+
+function sendTokens(rest: readonly string[]): Result<Command> {
+  const values = readFlags(rest, {
+    ...ACCOUNT_OPTION,
+    ...WRITE_OPTIONS,
+    to: { type: "string" },
+    asset: { type: "string", multiple: true },
+  });
+  if (!values.ok) {
+    return values;
+  }
+  const to = requireString(values.value, "to");
+  if (!to.ok) {
+    return to;
+  }
+  const assets = parseAssetFlags(values.value);
+  if (!assets.ok) {
+    return assets;
+  }
+  const account = parseAccount(values.value);
+  if (!account.ok) {
+    return account;
+  }
+  return ok({
+    kind: "send-tokens",
+    to: to.value,
+    assets: assets.value,
     account: account.value,
     hydra: boolFlag(values.value, "hydra"),
     yes: boolFlag(values.value, "yes"),

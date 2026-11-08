@@ -12,9 +12,9 @@
 //   3. mnemonic shapes — any run of 24 *or more* lowercase words separated by
 //      single spaces, even if it is not the configured mnemonic. The ">= 24"
 //      is deliberate: matching exactly 24 lets a phrase embedded in prose
-//      ("the words are abandon abandon … art") shift the window and leave
-//      the tail of the phrase in the log. Redacting the whole run instead
-//      over-redacts long lowercase prose, which is the cheaper mistake.
+//      ("the words are <24 words>") shift the window and leave the tail of
+//      the phrase in the log. Redacting the whole run instead over-redacts
+//      long lowercase prose, which is the cheaper mistake.
 //   4. CBOR shapes    — any run of >= 400 hex characters, which in this
 //      codebase can only be a serialised transaction or witness set.
 //

@@ -19,11 +19,15 @@ v1 is in progress, built in the step order below (see
 | 1 | skeleton, LICENSE, .gitignore, tsconfig, package.json, README stub, GitHub repo | done |
 | 2 | `src/core/*` + tests | done |
 | 3 | `src/ports/*`, `src/adapters/memory/*`, `src/services/*` + tests | done |
-| 4 | `src/adapters/lucid/*`, `src/config.ts` | not started |
-| 5 | wallet ops wired in `cli.ts` | not started |
-| 6 | send ADA | not started |
-| 7 | policy / mint / send tokens | not started |
+| 4 | `src/adapters/lucid/*`, `src/config.ts` | done |
+| 5 | wallet ops wired in `cli.ts` | done |
+| 6 | send ADA | done |
+| 7 | policy / mint / send tokens | done |
 | 8 | `src/http/*` | not started |
+
+Steps 5–7 are "done" in the sense that the commands exist, typecheck and
+have offline tests. They have **not** been run against Preview yet — see
+*Not yet smoke-tested* below for what to watch on the first real run.
 
 ## Architecture at a glance
 
@@ -47,22 +51,193 @@ const wallet = new WalletService({ keys, chain: ledger, config: config.value });
 const tx = new TxService({ keys, chain: ledger, router, config: config.value, log });
 ```
 
-Swap `MemoryKeys`/`MemoryLedger` for `LucidKeys`/`LucidChain`/`LucidExecutor`
-(step 4) and nothing in `services` or `core` changes.
+That is exactly what `createMemoryApp(network)` in
+`src/adapters/memory/app.ts` does in one call. `createApp(config)` in
+`src/app.ts` is the same wiring with `LucidKeys`/`LucidChain`/`LucidExecutor`
+instead, and nothing in `services` or `core` changes between the two.
+
+## What the lucid adapter does
+
+`src/adapters/lucid/` is the only directory allowed to import
+`@lucid-evolution/lucid` or `@blockfrost/blockfrost-js`, which would normally
+make it the least testable code in the repo — `npm test` has to pass from a
+clean clone with no `node_modules`, no network and no Blockfrost key. So the
+two parts most worth testing were pulled out into modules that import nothing
+from npm:
+
+- **`translate.ts`** — `TxPlan` → builder calls. `applyPlan` decides which
+  calls a plan implies, in what order, with what arguments (an output per
+  `pay.ToAddress`; `mintAssets` plus `attach.MintingPolicy` when the plan
+  mints; `validTo(slotToUnixTime(slot))` when it is time-locked; one
+  `attachMetadata` per label), against a structural `MinimalTxBuilder` subset
+  that lucid's real `TxBuilder` satisfies. The tests drive it with a
+  recording fake and assert the exact call sequence. `metadatumToLucid`
+  narrows core's `bigint` metadatum integers to the `number` lucid's
+  `TransactionMetadata` accepts, and refuses anything past 2^53 with
+  `INVALID_METADATA` rather than silently writing a different number on
+  chain.
+- **`mappers.ts`** — Blockfrost JSON → core types. Decimal-string quantities
+  become `bigint` exactly; nullable `coins_per_utxo_size` and `max_val_size`
+  fall back to `CONWAY_DEFAULT_PARAMS` so a min-ADA estimate can never
+  collapse to zero; a 404 is detected on the numeric `status_code` rather
+  than by matching an error message.
+
+What is left genuinely needs a network, and only `LucidExecutor.execute`
+touches it on the write path: open a Blockfrost provider, select the wallet
+from the seed, check that the address it derives is the one the plan was
+built for, apply the plan, `.complete()` (lucid does coin selection, change,
+balancing and the exact fee), read the fee off the built transaction body,
+log `describePlan` **before** submitting, then
+`sign.withWallet().complete().submit()`. Lucid's own error messages can
+contain a whole serialised transaction, so they are sanitised — runs of 400+
+hex characters omitted, 500-character truncation — before being re-thrown as
+`PROVIDER_ERROR`.
+
+`LucidKeys` is the only file in cardafin that handles signing material. A
+mnemonic never leaves it in any form, error messages included: lucid's error
+for an invalid phrase can echo the words back, so it is replaced rather than
+wrapped.
 
 ## Requirements
 
 Node >= 22.12.
 
-## Run
+## CLI
+
+```sh
+npm install
+npm run cli -- --help
+```
+
+| Command | What it does |
+|---|---|
+| `wallet new [--json]` | Generate a fresh 24-word mnemonic and print it once. |
+| `wallet address [--account N]` | Derive a payment address from `CARDAFIN_MNEMONIC`. |
+| `wallet balance [--account N \| --address ADDR]` | ADA and native-token balance. |
+| `wallet utxos [--account N \| --address ADDR]` | Unspent outputs at an address. |
+| `send-ada --to ADDR --amount ADA` | Send ADA. |
+| `policy new [--lock-seconds S \| --lock-before-slot SLOT] [--out FILE]` | Create a time-locked minting policy. |
+| `mint --policy FILE --name NAME --quantity Q` | Mint (negative quantity burns). |
+| `send-tokens --to ADDR --asset UNIT=QTY` | Send native tokens; `--asset` repeats. |
+
+Every command takes `--json` for machine-readable output on stdout. Every
+write command (`send-ada`, `mint`, `send-tokens`) previews first — the plan,
+the network, the route and the estimated fee — and then asks `Proceed?
+[y/N]`. `--yes` skips that prompt on a testnet so the commands are
+scriptable. It does **not** skip it on Mainnet, where the operator has to
+type the word `Mainnet`: a `--yes` copied out of a Preview runbook must not
+move real money.
+
+stdout is for data and stderr is for everything else — log records, plan
+summaries, prompts — so `npm run cli -- wallet balance --json | jq` works.
+`wallet new` and `--help` need no `.env` at all; everything else exits 2 if
+the environment is incomplete.
+
+## Try it on Preview
+
+Preview is a public Cardano testnet. The tADA on it is free and worthless,
+which makes it the right place to find out whether this actually works.
+
+**1. Get a Blockfrost project.** Sign up at
+[blockfrost.io](https://blockfrost.io), create a project, and choose the
+**Preview** network — a Preprod or Mainnet key will not work against Preview
+and will fail with a 403 rather than something helpful.
+
+**2. Generate a wallet.** This needs no configuration:
+
+```sh
+npm install
+npm run cli -- wallet new
+```
+
+Those 24 words are the only copy. cardafin does not store them.
+
+**3. Write `.env`.**
 
 ```sh
 cp .env.example .env
-# fill in BLOCKFROST_PROJECT_ID (and CARDAFIN_MNEMONIC if not using the
-# throwaway test vector) in .env
-npm install
-npm run cli -- --help   # coming in step 5
 ```
+
+```ini
+CARDAFIN_NETWORK=Preview
+BLOCKFROST_PROJECT_ID=previewYOURKEYHERE
+CARDAFIN_MNEMONIC="the twenty four words from step 2"
+```
+
+**4. Find your address and fund it.**
+
+```sh
+npm run cli -- wallet address
+```
+
+Paste the `addr_test1…` address into the
+[Cardano testnet faucet](https://docs.cardano.org/cardano-testnets/tools/faucet),
+pick **Preview**, and request tADA. It arrives in a block or two.
+
+```sh
+npm run cli -- wallet balance
+npm run cli -- wallet utxos
+```
+
+**5. Send some ADA.** To a second account of the same mnemonic, which is the
+easiest second address to get hold of:
+
+```sh
+npm run cli -- wallet address --account 1
+npm run cli -- send-ada --to addr_test1... --amount 5
+```
+
+**6. Create a policy and mint.** Keep the policy file: the native script
+cannot be recovered from the policy id, and without it the policy can never
+mint or burn again.
+
+```sh
+npm run cli -- policy new --lock-seconds 86400 --out policy.json
+npm run cli -- mint --policy policy.json --name CARDAFIN --quantity 1000 \
+  --cip25-name "Cardafin" --cip25-description "Preview smoke test"
+```
+
+**7. Send the tokens.** The unit is the 56-character policy id followed by
+the asset name in hex — `wallet balance --json` prints it for you.
+
+```sh
+npm run cli -- wallet balance --json
+npm run cli -- send-tokens --to addr_test1... --asset <policyId><nameHex>=400
+```
+
+cardafin funds the recipient's min-ADA itself, so a token send takes one
+number, not two.
+
+## Not yet smoke-tested
+
+The lucid adapter has **not** been run against Preview in this build. It was
+written against the exact pinned `.d.ts` files of
+`@lucid-evolution/lucid@0.8.9` and `@blockfrost/blockfrost-js@6.2.0` rather
+than from memory, and `translate.ts`/`mappers.ts` are tested offline, but no
+transaction has been submitted. On a first real run, watch for:
+
+- **Address agreement.** `LucidExecutor` refuses to submit unless
+  `lucid.wallet().address()` equals the plan's `from`, which `LucidKeys`
+  derived with `walletFromSeed`. Both use `addressType: "Base"` and the same
+  `accountIndex`, but they are two different lucid entry points — if they
+  disagree, that guard fires with "plan was built for a different wallet"
+  and nothing is sent. That is the check working, not the bug.
+- **Blockfrost network mismatch.** A Preprod key against Preview gives a 403
+  wrapped as `PROVIDER_ERROR`. Check the project's network first.
+- **Fee and min-ADA estimates.** Core's numbers are deliberately rounded up;
+  the receipt's `fee` is the node's exact value read off the built
+  transaction body. A large gap between the previewed estimate and the
+  charged fee is interesting but not an error.
+- **The mint validity window.** `planMint` sets `validTo` to
+  `min(lockBeforeSlot - 1, currentSlot + 7200)`. If the node rejects a mint
+  as outside its validity interval, the slot/time mapping is the thing to
+  look at — `validTo` is a POSIX millisecond value derived from a slot via
+  `lucid.slotToUnixTime`.
+- **CIP-25 display.** Metadata under label 721 uses CIP-25 **version 2**
+  (asset keyed by hex name, `version: 2`). If a wallet shows the token
+  without its name or image, that is where to look.
+- **`awaitTx`.** Not called by any CLI command; the receipt carries a
+  Cardanoscan link instead. Nothing waits for a confirmation yet.
 
 ## Test
 
@@ -76,8 +251,12 @@ grepping them. See `docs/ARCHITECTURE.md` §1 for why.
 
 The service tests are end-to-end against `MemoryLedger` and `MemoryKeys` —
 real planning, fees, min-ADA, time-locked policies, minting and change, with
-imaginary money. `adapters/lucid` (step 4) is the one directory exempt from
-the purity rule, and nothing in the test suite touches it.
+imaginary money. `adapters/lucid` is the one directory exempt from the purity
+rule, and no test file imports lucid or blockfrost even transitively: its two
+pure modules (`translate.ts`, `mappers.ts`) carry that directory's tests, and
+`src/cli/args.ts` is pure for the same reason. `src/app.ts` and `src/cli.ts`
+are the only modules that pull in the real adapters, and nothing in the test
+suite imports either.
 
 `npm run typecheck` runs `tsc`, which does need `npm install` first (it is a
 devDependency, not part of the Node runtime).
@@ -105,11 +284,21 @@ npm run check    # typecheck + test
 - No secrets are committed to git: `.env` is gitignored (`.env.example` is
   the only tracked env file) and `AGENTS.md` / `CLAUDE.md` / `.claude/` are
   also gitignored.
-- Key custody in v1 is a single master mnemonic in an env var on the host.
-  That is good enough for a single-operator testnet service; it is not good
-  enough for meaningful mainnet funds. The upgrade path is swapping the
-  implementation behind `KeyPort` for a KMS/HSM-backed signer without
-  touching services or core.
+- **Key custody in v1 is a single master mnemonic in an env var on the
+  host** (`CARDAFIN_MNEMONIC`), read once by `loadConfig` and held in memory.
+  Nothing is persisted: there is no wallet store, no database and no key
+  file. Per-client separation is by CIP-1852 account index — one account per
+  client, so a leaked account is one client's blast radius rather than
+  everyone's, and a client can leave with their derivation path.
+
+  That is good enough for a single-operator testnet service. It is **not**
+  good enough for meaningful mainnet funds: anything that can read the
+  process environment can move every account's money. The upgrade path is
+  the port boundary — swap the implementation behind `KeyPort` for a
+  KMS/HSM-backed signer, which changes one adapter and nothing in `services`
+  or `core`. `LucidKeys` is the only file in the repo that touches signing
+  material, and `SignerRef` (`{ mnemonic, accountIndex }`) is the only shape
+  that crosses the port. See `docs/ARCHITECTURE.md` §6.
 - Mainnet is opt-in: `loadConfig` refuses to start against `Mainnet` unless
   `CARDAFIN_MAINNET_CONFIRM=I_UNDERSTAND_REAL_FUNDS`, and every executor
   re-checks before submitting.
@@ -132,9 +321,10 @@ imports; `ports` define the interfaces for anything touching a key or the
 network; `adapters/memory` gives deterministic fakes for every port used by
 tests, while `adapters/lucid` is the only directory allowed to import
 `@lucid-evolution/lucid` and `@blockfrost/blockfrost-js`; `services` compose
-core + ports into wallet and transaction use-cases; `http` and `cli` are thin
-surfaces over services. See `docs/ARCHITECTURE.md` for the full, binding
-spec.
+core + ports into wallet and transaction use-cases; `app.ts` is the single
+composition root; `cli.ts` (and `http`, step 8) are thin surfaces over
+services, with `cli/args.ts` keeping argument parsing pure and tested. See
+`docs/ARCHITECTURE.md` for the full, binding spec.
 
 ## License
 
