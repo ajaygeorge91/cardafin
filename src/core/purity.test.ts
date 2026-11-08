@@ -1,6 +1,9 @@
-// core/ports purity gate: `src/core` and `src/ports` may import only
-// relative files (./ or ../) or node: builtins. No npm packages, no lucid,
-// no blockfrost. See docs/ARCHITECTURE.md §1.
+// Purity gate: `src/core`, `src/ports`, `src/services` and
+// `src/adapters/memory` may import only relative files (./ or ../) or node:
+// builtins. No npm packages, no lucid, no blockfrost. That is what lets
+// `npm test` pass from a clean clone with no node_modules, no network and no
+// key. `src/adapters/lucid` is the one directory exempt from this rule.
+// See docs/ARCHITECTURE.md §1.
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -56,8 +59,10 @@ function isAllowedSpecifier(specifier: string): boolean {
   return specifier.startsWith("./") || specifier.startsWith("../");
 }
 
-test("src/core and src/ports import only relative paths or node: builtins", async () => {
-  const roots = ["src/core", "src/ports"];
+const PURE_ROOTS = ["src/core", "src/ports", "src/services", "src/adapters/memory"];
+
+test("core, ports, services and the memory adapters import only relative paths or node: builtins", async () => {
+  const roots = PURE_ROOTS;
   const violations: string[] = [];
 
   for (const root of roots) {
@@ -75,6 +80,6 @@ test("src/core and src/ports import only relative paths or node: builtins", asyn
   assert.deepEqual(
     violations,
     [],
-    `found non-relative, non-node: imports in src/core or src/ports:\n${violations.join("\n")}`,
+    `found non-relative, non-node: imports in ${PURE_ROOTS.join(", ")}:\n${violations.join("\n")}`,
   );
 });
