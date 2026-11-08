@@ -10,3 +10,4 @@
 export * from "./keys.ts";
 export * from "./ledger.ts";
 export * from "./hydra.ts";
+export * from "./app.ts";
