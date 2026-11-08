@@ -355,3 +355,52 @@ CARDAFIN_API_KEYS=                   # comma-separated bearer tokens for the HTT
 | 8 | `src/http/*` | tests via `node:http` against memory adapters |
 
 Nothing touches Mainnet in this plan.
+
+## 9. HTTP surface
+
+`src/http/router.ts` exports `createHttpHandler(deps)`, a pure
+`(req, res) => Promise<void>` built from `node:http` alone — no framework —
+wired from a `WalletService`, a `TxService`, `Pick<Config, "network" |
+"apiKeys">` and a `Logger`. `src/http/server.ts` is the only file that calls
+`loadConfig` and `createApp` and actually binds a port (`npm run serve`); it
+pulls in lucid transitively through `app.ts`, which is why
+`src/http/router.test.ts` drives `createHttpHandler` against
+`createMemoryApp` instead and stays inside the no-`node_modules` test rule.
+
+Every route lives under `/v1`. `GET /v1/health` needs no auth; everything
+else requires `Authorization: Bearer <key>` against `config.apiKeys`,
+compared with `crypto.timingSafeEqual` on equal-length buffers. An empty
+`apiKeys` list is a hard 503 on every protected route — fail closed, never
+serve a protected route unauthenticated because the operator forgot to set
+`CARDAFIN_API_KEYS`. There is deliberately no `POST /v1/wallet/create`:
+generating a mnemonic over HTTP and handing it back in a response body is a
+footgun waiting to land in an access log; `cli wallet new` is the way to get
+one. Policies created through `POST /v1/policies` are kept in an in-memory
+`Map<policyId, PolicyInfo>` for the process's lifetime only — v1 has no
+registry, so `POST /v1/tx/mint` either takes the `policy` object back or
+looks it up by `policyId` in that map, and either way the caller is the one
+responsible for keeping the PolicyInfo JSON (same rule as the CLI's
+`policy.json`). `hydra: true` passes straight through the request body into
+the plan, unchanged, and comes back as 501 `NOT_IMPLEMENTED` — the client
+contract does not change shape depending on whether Hydra routing exists
+yet.
+
+Every write route (`send-ada`, `mint`, `send-tokens`) accepts `?dryRun=1`
+(or `{"dryRun": true}` in the body), which runs the same validation, the
+same chain reads and the same `checkFunds`/Mainnet gate as the real
+`TxService.preview` and stops before the executor — nothing is signed or
+submitted, and the response is the preview (`plan`, `estimatedFee`,
+`minAdaPerOutput`) rather than a receipt.
+
+A `CardafinError` from core or a service maps to a status by its code:
+`INVALID_*` / `BELOW_MIN_ADA` / `WRONG_NETWORK` → 400, `INSUFFICIENT_FUNDS`
+→ 402, `MAINNET_NOT_CONFIRMED` → 403, `NOT_IMPLEMENTED` → 501,
+`PROVIDER_ERROR` → 502. Anything else is logged server-side (through the
+same redacting logger every service uses) and answered with a generic 500 —
+never the stack, never the raw error text. Every response body, success or
+error, goes through `toJson`, which walks the value recursively and turns
+every `bigint` into a decimal string before `JSON.stringify` ever sees it.
+The router logs exactly one line per request — `{ method, path, status, ms
+}`, path without the query string — and never a header or a body; the
+restore route's mnemonic in particular never reaches `deps.log` in any
+form.
