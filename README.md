@@ -17,7 +17,7 @@ v1 is in progress, built in the step order below (see
 | Step | Deliverable | Status |
 |---|---|---|
 | 1 | skeleton, LICENSE, .gitignore, tsconfig, package.json, README stub, GitHub repo | done |
-| 2 | `src/core/*` + tests | not started |
+| 2 | `src/core/*` + tests | done |
 | 3 | `src/ports/*`, `src/adapters/memory/*`, `src/services/*` + tests | not started |
 | 4 | `src/adapters/lucid/*`, `src/config.ts` | not started |
 | 5 | wallet ops wired in `cli.ts` | not started |
