@@ -1,22 +1,14 @@
-// Published specification test vectors, shared by the capabilities that need
-// them. Not fixtures in the "made-up data" sense — these are the values the
-// specs themselves publish, and they are what turns "my implementation is
-// self-consistent" into "my implementation is correct".
-//
-// Nothing here is personal data and nothing here is a secret: a hash of
-// "abc", and the asset fingerprints CIP-14 publishes. They are safe to
-// upload, which is the whole point of writing them down rather than
-// generating them from a key.
+// Published specification test vectors — the values the specs themselves
+// print, not made-up data. Nothing here is personal or secret.
 //
 // Provenance, so a reader can re-derive them:
-//   * BLAKE2b — RFC 7693. The 512-bit digest of "abc" below is the
-//     reference value printed in the RFC itself; the 224- and 160-bit
-//     digests were produced by an independent implementation (Python's
-//     hashlib) and cross-checked against it. Cardano uses blake2b-224 for
-//     key and script hashes and blake2b-160 for asset fingerprints, neither
-//     of which `node:crypto` exposes — hence M1 writing one by hand.
+//   * BLAKE2b — RFC 7693. The 512-bit digest of "abc" below is the reference
+//     value printed in the RFC itself. The 224- and 160-bit digests were
+//     produced by an independent implementation (Python's hashlib) and
+//     cross-checked against it. Cardano uses blake2b-224 for key and script
+//     hashes and blake2b-160 for asset fingerprints, and `node:crypto`
+//     exposes neither.
 //   * CIP-14 — the eight vectors in the CIP's own test-vector table.
-// See docs/ARCHITECTURE.md §1.
 
 export type Blake2bVector = {
   /** UTF-8 input. */
