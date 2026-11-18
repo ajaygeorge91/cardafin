@@ -46,7 +46,7 @@ test('utf-8 round-trips through the hex the wallet wants', async () => {
   assert.equal(toHexUtf8('abc'), '616263');
 });
 
-test('the browser signs the server\'s message verbatim and never builds its own', async () => {
+test('the browser signs the server\'s message verbatim', async () => {
   const { signChallenge, toHexUtf8 } = await import('./login.mjs');
   const signed = await signChallenge(fakeWallet(), CHALLENGE.body);
 
@@ -97,7 +97,7 @@ test('the full flow reports each step, and stops at the first failure', async ()
   assert.equal(seen[1].body.nonce, CHALLENGE.body.nonce, 'the signature is tied to the nonce it answers');
 });
 
-test('an unbuilt identity capability reads as work, not as a crash', async () => {
+test('an unwritten identity capability surfaces its brief, not a crash', async () => {
   const { runLogin, describe } = await import('./login.mjs');
   const notBuilt = {
     ok: false,

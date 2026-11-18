@@ -1,19 +1,12 @@
-// `npm run console:probe` — the console's checks, without a browser.
+// `npm run console:probe` — the console's checks without a browser.
 //
-// Why this exists: `npm run console` is the nicest way to see a module work,
-// but it assumes you can open http://localhost:8787 in a browser. In a
-// sandbox you may not be able to. So the same surface is exercised here and
-// printed as text: every static page, every console endpoint, and every
-// route every capability registered, with what it answered.
+// `npm run console` is the nicer way to watch a module work, but it assumes
+// you can open localhost in a browser, and in a sandbox you may not be able
+// to. So the same surface is exercised here and printed as text: every page,
+// every console endpoint, and every route each capability registered.
 //
-// That makes it usable as a Done-when line — a reviewer with nothing but a
-// terminal runs one command and reads the result — and as the answer to
-// "did my capability actually get mounted", which is otherwise invisible
-// until someone clicks something.
-//
-// Exit code 0 means every check answered as expected. 501 is expected: an
-// unbuilt capability route is supposed to say so. See
-// docs/ARCHITECTURE.md §1.
+// Exit 0 means everything answered as expected. A 501 is expected — an
+// unwritten route is supposed to say so.
 
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";

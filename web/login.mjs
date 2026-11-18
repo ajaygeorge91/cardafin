@@ -1,15 +1,10 @@
 // The browser half of wallet login: CIP-30 in, a DataSignature out.
 //
-// The one design decision worth stating, because it is the thing that
-// usually breaks this flow: **the browser never builds the message it
-// signs.** `POST /v1/identity/challenge` returns both the challenge and the
-// exact `message` string to sign, and this module signs that verbatim.
-//
-// If the browser composed the message itself, the server would have to
-// recompose it byte-identically to verify — same field order, same
-// separators, same line endings, same unicode — and the first time those
-// drift every signature fails with "invalid". Signing what you were handed
-// removes the whole class of bug.
+// The browser never builds the message it signs. `POST /v1/identity/challenge`
+// returns both the challenge and the exact `message` string to sign, and this
+// signs that verbatim. Otherwise the server has to recompose it
+// byte-identically to verify — same field order, separators, line endings —
+// and the first drift fails every signature with nothing to debug.
 //
 // CIP-30 does not hash the payload and uses no external_aad: the bytes go in
 // as they are, hex-encoded. Do not add a hash step here.
@@ -27,11 +22,7 @@ export function fromHexUtf8(hex) {
   return new TextDecoder().decode(bytes);
 }
 
-/**
- * Ask the server for a challenge. Returns the parsed body either way: a 501
- * while `identity` is unbuilt is a normal answer here, not an exception, and
- * the console shows it as "not built yet" rather than as a crash.
- */
+/** A 501 while `identity` is unwritten is a normal answer here, not a throw. */
 export async function requestChallenge(call, { purpose = 'login' } = {}) {
   const res = await call('/v1/identity/challenge', {
     method: 'POST',
@@ -41,9 +32,8 @@ export async function requestChallenge(call, { purpose = 'login' } = {}) {
 }
 
 /**
- * Sign the server's message with the wallet's **stake** credential.
- * `api.getRewardAddresses()` returns hex-encoded addresses; CIP-30 wants the
- * same hex back as the first argument to signData, so nothing is decoded.
+ * Sign with the wallet's stake credential. `getRewardAddresses()` returns
+ * hex, and signData wants that same hex, so nothing is decoded here.
  */
 export async function signChallenge(api, challenge) {
   if (typeof challenge?.message !== 'string' || challenge.message === '') {
@@ -71,9 +61,8 @@ export async function verifySignature(call, { nonce, signature, key }) {
 }
 
 /**
- * The whole flow, as a list of steps the console renders one at a time.
- * Each step is `{ step, ok, detail }` — including the step that failed, so
- * the UI shows how far it got rather than only that it stopped.
+ * The flow as a list of `{ step, ok, detail }`, failed step included, so the
+ * console can show how far it got rather than only that it stopped.
  */
 export async function runLogin({ call, api, onStep = () => {} }) {
   const steps = [];
@@ -107,16 +96,10 @@ export async function runLogin({ call, api, onStep = () => {} }) {
 }
 
 /**
- * The browser-side half of the cross-network check.
- *
- * CIP-8 warns about this by name: get someone to sign on a testnet, replay
- * the signature on mainnet. The server closes it properly — the network is
- * baked into the challenge — but a wallet pointed at the wrong network
- * should be stopped here too, before anyone signs anything, because "it
- * signed and then failed" is a much worse thing to read than "your wallet
- * is on the wrong network".
- *
- * CIP-30 network ids: 1 is mainnet, everything else is a testnet.
+ * Stop a wrong-network login before anything is signed. The server closes
+ * cross-network replay properly, but "your wallet is on the wrong network"
+ * is a better error than "invalid signature". CIP-30 network ids: 1 is
+ * mainnet, anything else a testnet.
  */
 export function networkMismatch(serverNetwork, networkId) {
   const walletMainnet = networkId === 1;
@@ -128,7 +111,7 @@ export function networkMismatch(serverNetwork, networkId) {
     + `${walletMainnet ? 'Mainnet' : 'a testnet'}. Switch the wallet's network before signing.`;
 }
 
-/** A 501 from an unbuilt capability reads as work, not as a crash. */
+/** Render an error, naming the brief when the route is simply unwritten. */
 export function describe(result) {
   const error = result.body?.error;
   if (!error) {

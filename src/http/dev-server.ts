@@ -1,18 +1,13 @@
 // `npm run console` — the whole service over the in-memory adapters, plus a
-// browser console to watch it work.
+// page to watch it work.
 //
-// The point of this file: it needs **no node_modules, no network, no key and
-// no Blockfrost project id**. `createMemoryApp` is pure (node builtins and
-// relative imports only), `node:http` is a builtin, and the console page is
-// three static files. So it runs from a clean clone, offline, in a sandbox —
-// which is what makes "then open the Accounts panel and see 120 rows" a
-// check a stranger can actually perform.
+// It needs no node_modules, no network and no key: `createMemoryApp` imports
+// only node builtins and relative files, and the page is three static files.
+// So it runs offline from a clean clone, which is what makes "open the
+// accounts panel and see 120 rows" a check a stranger can perform.
 //
-// This is NOT `src/http/server.ts`. That one wires the real adapters, can
-// move real funds, and pulls lucid in transitively. This one cannot touch a
-// chain even if you ask it to: there is no executor behind it but a fake
-// ledger of imaginary money.
-// See docs/ARCHITECTURE.md §1.
+// This is not `src/http/server.ts`. That one wires the real adapters and can
+// move real funds. There is no executor behind this one but a fake ledger.
 
 import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -82,22 +77,14 @@ async function serveStatic(res: ServerResponse, file: string): Promise<boolean> 
 export type CapabilityStatus = {
   name: string;
   description: string;
-  /** "scaffold" until the generated placeholder contract is replaced. */
+  /** "scaffold" while any route still answers 501. A light, not a gate. */
   state: "scaffold" | "implemented";
   doneWhen: string[];
-  /** The routes this capability actually registered, fully qualified. */
   routes: { method: "GET" | "POST"; path: string }[];
 };
 
-/**
- * What the console shows per module: the registered route surface, taken
- * from the capability itself rather than guessed from its name, plus the
- * README's description and Done-when.
- *
- * "scaffold" is detected from the generated placeholder still being present
- * in `requests.ts` — crude on purpose: it is a progress light, not a gate.
- * The gate is `npm run check`.
- */
+/** Per-module status for the console: the registered routes, read back from
+ *  the capability itself, plus its README's description and Done-when. */
 export async function describeCapabilities(
   capabilities: readonly CapabilityModule[] = CAPABILITIES,
   root = "src/capabilities",
@@ -112,13 +99,13 @@ export async function describeCapabilities(
   for (const capability of [...capabilities].sort((a, b) => a.name.localeCompare(b.name))) {
     const dir = path.join(root, capability.name);
     const readme = await readFile(path.join(dir, "README.md"), "utf8").catch(() => "");
-    const requests = await readFile(path.join(dir, "requests.ts"), "utf8").catch(() => "");
+    const declaration = await readFile(path.join(dir, "capability.ts"), "utf8").catch(() => "");
     const description = readme.split("\n").map((l) => l.trim()).filter(Boolean)[1] ?? capability.summary;
     const doneWhen = [...readme.matchAll(/^(node |npm run )[^\n]*$/gm)].map((m) => m[0] ?? "");
     out.push({
       name: capability.name,
       description,
-      state: requests.includes("Replace with the real contract") ? "scaffold" : "implemented",
+      state: declaration.includes("notBuilt") ? "scaffold" : "implemented",
       doneWhen,
       routes: capability.routes(ctx).map((r) => ({ method: r.method, path: `/v1${r.path}` })),
     });
@@ -127,12 +114,8 @@ export async function describeCapabilities(
 }
 
 export type DevHandlerOptions = {
-  /**
-   * Where the request log goes. `npm run console` leaves it on stderr;
-   * `npm run console:probe` silences it, because the probe's own report is
-   * the output and a wall of JSON in front of it is not evidence of
-   * anything.
-   */
+  /** Where the request log goes. The console leaves it on stderr; the probe
+   *  silences it, since its own report is the output. */
   logSink?: LogSink;
 };
 
