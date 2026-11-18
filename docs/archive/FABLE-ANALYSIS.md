@@ -1,3 +1,10 @@
+> **Archived — superseded, kept for history.**
+>
+> This is a July 2026 design exploration from the period when cardafin was
+> still scoped as "a verifiable database on Cardano". The binding design is
+> `docs/ARCHITECTURE.md`; the current direction is wallet-based identity and
+> native tokens, decided in October 2026. Nothing below is current.
+
 # Fable analysis — cardafin
 
 My independent response to the vision brief ("database in blockchain as a

@@ -1,8 +1,9 @@
-// Purity gate: `src/core`, `src/ports`, `src/services` and
-// `src/adapters/memory` may import only relative files (./ or ../) or node:
-// builtins. No npm packages, no lucid, no blockfrost. That is what lets
-// `npm test` pass from a clean clone with no node_modules, no network and no
-// key. `src/adapters/lucid` is the one directory exempt from this rule.
+// Purity gate: `src/core`, `src/ports`, `src/services`, `src/capabilities`,
+// `src/fixtures` and `src/adapters/memory` may import only relative files
+// (./ or ../) or node: builtins. No npm packages, no lucid, no blockfrost.
+// That is what lets `npm test` pass from a clean clone with no node_modules,
+// no network and no key — and what lets `npm run console` serve the whole
+// thing offline. `src/adapters/lucid` is the one directory exempt.
 // See docs/ARCHITECTURE.md §1.
 
 import test from "node:test";
@@ -59,9 +60,16 @@ function isAllowedSpecifier(specifier: string): boolean {
   return specifier.startsWith("./") || specifier.startsWith("../");
 }
 
-const PURE_ROOTS = ["src/core", "src/ports", "src/services", "src/adapters/memory"];
+const PURE_ROOTS = [
+  "src/core",
+  "src/ports",
+  "src/services",
+  "src/capabilities",
+  "src/fixtures",
+  "src/adapters/memory",
+];
 
-test("core, ports, services and the memory adapters import only relative paths or node: builtins", async () => {
+test("core, ports, services, capabilities, fixtures and the memory adapters import only relative paths or node: builtins", async () => {
   const roots = PURE_ROOTS;
   const violations: string[] = [];
 

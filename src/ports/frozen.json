@@ -1,0 +1,18 @@
+{
+  "note": "Regenerate with `node scripts/freeze-ports.mjs`. A diff here is a contract change.",
+  "ports": {
+    "accounts.ts": "0aafad51d6529357",
+    "chain.ts": "c8bed8ffe4f27882",
+    "challenges.ts": "7157ad370ed2a535",
+    "clock.ts": "53db82fbd89f26b6",
+    "executor.ts": "50ddb8b01cd03bff",
+    "identity.ts": "941d38efde27a4a0",
+    "index.ts": "ed40c74bba528947",
+    "keys.ts": "2e1597e642de5c51",
+    "logger.ts": "dec552918481cd91",
+    "oauth.ts": "b1122c167260d056",
+    "policies.ts": "5117c5a45849bb30",
+    "provider.ts": "8da15dd6ec333571",
+    "sessions.ts": "4f4e512e36b51b2c"
+  }
+}

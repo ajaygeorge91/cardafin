@@ -1,0 +1,133 @@
+/* cardafin dev console — local, memory adapters, imaginary money. */
+:root {
+  color-scheme: light dark;
+  --bg: #f6f8fa;
+  --panel: #ffffff;
+  --ink: #15232c;
+  --muted: #5d7183;
+  --line: #d8e2ea;
+  --slate: #2f556a;
+  --ice: #ddeff9;
+  --red: #a13348;
+  --green: #1d7a54;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1a21;
+    --panel: #16242d;
+    --ink: #e7f0f6;
+    --muted: #8da6b8;
+    --line: #273d4b;
+    --slate: #7fb3cf;
+    --ice: #1b3240;
+    --green: #4fc48e;
+    --red: #e08098;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+header {
+  padding: 22px 28px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+h1 { font-size: 17px; margin: 0; letter-spacing: -0.01em; }
+h1 span { color: var(--muted); font-weight: 400; }
+.badge {
+  font: 600 11px/1 var(--mono);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--ice);
+  color: var(--slate);
+  border: 1px solid var(--line);
+}
+.warn { margin-left: auto; color: var(--muted); font-size: 12px; }
+main {
+  padding: 22px 28px 60px;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  align-items: start;
+}
+section {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px 18px 18px;
+}
+section h2 {
+  font-size: 13px;
+  margin: 0 0 2px;
+  letter-spacing: .02em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+section p.desc { margin: 0 0 12px; color: var(--muted); font-size: 12.5px; }
+.state {
+  font: 600 10px/1 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  padding: 4px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.state.implemented { color: var(--green); border-color: currentColor; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+button {
+  font: 500 12.5px/1 inherit;
+  padding: 7px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  cursor: pointer;
+}
+button:hover { border-color: var(--slate); }
+button:active { transform: translateY(1px); }
+pre {
+  margin: 0;
+  padding: 11px 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: 11.5px/1.5 var(--mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 260px;
+  overflow: auto;
+}
+pre.err { border-color: var(--red); color: var(--red); }
+code.cmd {
+  display: block;
+  font: 11.5px/1.7 var(--mono);
+  color: var(--muted);
+  word-break: break-all;
+}
+
+/* A row nested inside a row (the wallet picker) must not double the gap. */
+.row .row { margin: 0; }
+code {
+  font: 11.5px/1.5 var(--mono);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+button:focus-visible { outline: 2px solid var(--slate); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  button:active { transform: none; }
+}

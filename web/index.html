@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1c33">
+  <meta name="description" content="Create tokens, publish verifiable records, and connect your Cardano wallet in one workspace.">
+  <title>Cardafin — Create on Cardano</title>
+  <link rel="icon" href="./mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="wallet" viewBox="0 0 24 24"><path d="M19 8V6a2 2 0 0 0-2-2H6a3 3 0 0 0 0 6h14a1 1 0 0 1 1 1v7a2 2 0 0 1-2 2H6a3 3 0 0 1-3-3V7m18 6h-5a2 2 0 1 0 0 4h5"/></symbol>
+    <symbol id="record" viewBox="0 0 24 24"><path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a2 2 0 0 1 2-2Zm7 0v5h5M9 12h6m-6 4h6"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  </svg>
+
+  <div class="mast">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="topbar wrap">
+      <a class="brand" href="./" aria-label="Cardafin home"><img src="./mark.svg" alt="" width="32" height="32">cardafin</a>
+      <nav aria-label="Main navigation">
+        <a href="#capabilities">Capabilities</a>
+        <a href="#example">Record demo</a>
+      </nav>
+      <button class="button button-outline" type="button" data-connect>
+        <svg class="icon"><use href="#wallet"/></svg><span>Connect wallet</span>
+      </button>
+    </header>
+
+    <main id="main">
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <div class="network"><span></span> Built for Cardano mainnet</div>
+          <h1 id="hero-title">Cardano,<br><span>made clear.</span></h1>
+          <p>Create tokens, publish records anyone can verify, and prove who’s behind an action. Start with the wallet you already use.</p>
+          <div class="hero-actions">
+            <button class="button button-primary" type="button" data-connect>
+              <svg class="icon"><use href="#wallet"/></svg><span>Connect wallet</span>
+            </button>
+            <a class="button button-link" href="#example">Explore a record <svg class="icon"><use href="#arrow"/></svg></a>
+          </div>
+        </div>
+
+        <div class="hero-stage" id="example">
+          <div class="chart" aria-hidden="true">
+            <svg viewBox="0 0 650 610" fill="none">
+              <defs>
+                <linearGradient id="orbit-ink" x1="0" y1="580" x2="640" y2="55" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#72bbec" stop-opacity=".12"/><stop offset=".55" stop-color="#72bbec" stop-opacity=".6"/><stop offset="1" stop-color="#a7d8ff" stop-opacity=".22"/>
+                </linearGradient>
+                <pattern id="chart-grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0v32" stroke="#9ac8eb" stroke-opacity=".14"/></pattern>
+                <radialGradient id="chart-mask"><stop offset=".25" stop-color="white"/><stop offset="1" stop-color="black"/></radialGradient>
+                <mask id="fade-grid"><rect width="650" height="610" fill="url(#chart-mask)"/></mask>
+              </defs>
+              <rect width="650" height="610" fill="url(#chart-grid)" mask="url(#fade-grid)"/>
+              <g transform="rotate(-26 335 302)" stroke="url(#orbit-ink)">
+                <ellipse cx="335" cy="302" rx="303" ry="187"/>
+                <ellipse cx="335" cy="302" rx="303" ry="159"/>
+                <ellipse cx="335" cy="302" rx="303" ry="124"/>
+                <ellipse cx="335" cy="302" rx="303" ry="86"/>
+                <ellipse cx="335" cy="302" rx="303" ry="44"/>
+                <path d="M32 302h606M335 115v374" stroke-dasharray="3 7"/>
+                <circle cx="100" cy="184" r="5" fill="#9ed8fb"/>
+                <circle cx="578" cy="411" r="5" fill="#efb48e"/>
+                <circle cx="499" cy="174" r="3" fill="#9ed8fb"/>
+                <circle cx="84" cy="391" r="3" fill="#efb48e"/>
+              </g>
+              <path d="M76 171h20m-10-10v20m474 299h20m-10-10v20M507 59h12m-6-6v12M130 519h12m-6-6v12" stroke="#a0c9eb" opacity=".6"/>
+            </svg>
+          </div>
+          <figure class="demo" aria-labelledby="demo-title">
+            <div class="demo-bar">
+              <span class="demo-label"><svg class="icon"><use href="#record"/></svg> Record explorer</span>
+              <span class="sample-tag">Sample data</span>
+            </div>
+            <div class="demo-body">
+              <div class="demo-heading">
+                <div><h2 id="demo-title">A listing’s history</h2><p>Plotmap / 6wm18g2a5x</p></div>
+                <span class="status-pill" id="record-status">Sold</span>
+              </div>
+              <ol class="timeline" aria-label="Record versions">
+                <li><button type="button" data-version="0" aria-pressed="false"><span class="point"></span><span>Published</span><time datetime="2026-11-02">Nov 2</time></button></li>
+                <li><button type="button" data-version="1" aria-pressed="false"><span class="point"></span><span>Price updated</span><time datetime="2026-11-06">Nov 6</time></button></li>
+                <li><button type="button" data-version="2" aria-pressed="true"><span class="point"></span><span>Marked sold</span><time datetime="2026-11-10">Nov 10</time></button></li>
+              </ol>
+              <div class="record-detail">
+                <div><span>Asking price</span><strong id="record-price">₹82,50,000</strong></div>
+                <div><span>Version <b id="version-number">3</b> hash</span><code id="record-hash" title="c7832459e9e97c8a3c6dcec23e192f1b16d6fe2b0981dfd1d14972a6ddbaf2fa">c7832459…ddbaf2fa</code></div>
+              </div>
+              <button class="verify-button" id="verify" type="button"><svg class="icon"><use href="#check"/></svg> Verify this version <svg class="icon verify-arrow"><use href="#arrow"/></svg></button>
+              <p class="verify-result" id="verify-result" role="status"></p>
+            </div>
+          </figure>
+          <p class="stage-caption">An interactive example using a fictional listing</p>
+        </div>
+      </section>
+  <section class="capabilities" id="capabilities" aria-labelledby="capabilities-title">
+    <div class="wrap">
+      <div class="section-heading">
+        <h2 id="capabilities-title">What will you put on chain?</h2>
+        <p>Start with something you already do. Cardafin gives you a straightforward way to take it on chain.</p>
+      </div>
+      <div class="capability-grid">
+        <article>
+          <svg class="feature-art" viewBox="0 0 76 64" fill="none" aria-hidden="true"><path d="m37 5 25 14-25 14L12 19 37 5Z" fill="#ccdef2"/><path d="m12 19 25 14 25-14v26L37 59 12 45V19Zm25 14v26m0-54 25 14-25 14L12 19 37 5Z"/><path d="m12 32 25 14 25-14M24 12l25 14" opacity=".55"/><circle cx="62" cy="19" r="4" fill="#e6a37e"/></svg>
+          <h3>Create assets</h3>
+          <p>Issue tokens and NFTs for a project, a membership, or a collectible. Review what you’re creating before it goes on chain.</p>
+        </article>
+        <article>
+          <svg class="feature-art" viewBox="0 0 76 64" fill="none" aria-hidden="true"><path d="m38 22 26 14-26 14-26-14 26-14Z" fill="#d9e6f4"/><path d="m38 32 26 14-26 14-26-14m26-24 26 14-26 14-26-14" opacity=".7"/><path d="m38 5 26 14-26 14-26-14L38 5Z" fill="#d1e2f3"/><path d="m29 18 6 4 13-7"/><circle cx="64" cy="19" r="4" fill="#e6a37e"/></svg>
+          <h3>Publish records</h3>
+          <p>Keep a history people can verify for themselves. A listing, a certificate, or a document can have a permanent record of changes.</p>
+        </article>
+        <article>
+          <svg class="feature-art" viewBox="0 0 76 64" fill="none" aria-hidden="true"><circle cx="38" cy="32" r="26" fill="#d9e6f4"/><circle cx="38" cy="32" r="18"/><path d="M34 45V33a7 7 0 1 1 8 0v12m-8-7h8M38 6v8m0 36v8M12 32h8m36 0h8"/><circle cx="57" cy="13" r="4" fill="#e6a37e"/></svg>
+          <h3>Prove control</h3>
+          <p>Use a wallet signature to show that an action came from you. Build toward an identity you can carry between applications.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+    </main>
+  </div>
+
+  <footer class="footer">
+    <div class="wrap">
+      <a class="brand" href="./"><img src="./mark.svg" alt="" width="28" height="28">cardafin</a>
+      <span>A workspace for Cardano.</span>
+      <a href="#main">Back to top ↑</a>
+    </div>
+  </footer>
+
+  <dialog id="wallet-dialog" aria-labelledby="wallet-title" aria-describedby="wallet-intro wallet-feedback">
+    <div class="dialog-head">
+      <span class="dialog-icon"><svg class="icon"><use href="#wallet"/></svg></span>
+      <form method="dialog"><button class="icon-button" aria-label="Close wallet picker"><svg class="icon"><use href="#close"/></svg></button></form>
+    </div>
+    <h2 id="wallet-title">Connect your wallet</h2>
+    <p id="wallet-intro">Choose an installed Cardano wallet. Your wallet will ask you to approve the connection.</p>
+    <div id="wallet-options" class="wallet-options"></div>
+    <p id="wallet-feedback" class="wallet-feedback" role="status"></p>
+    <div id="wallet-help" hidden>
+      <p>Open this page in a browser with a Cardano wallet extension installed.</p>
+      <div class="wallet-links"><a href="https://www.lace.io/" target="_blank" rel="noreferrer">Lace ↗</a><a href="https://eternl.io/" target="_blank" rel="noreferrer">Eternl ↗</a><a href="https://www.yoroi-wallet.com/" target="_blank" rel="noreferrer">Yoroi ↗</a></div>
+    </div>
+    <form method="dialog"><button class="dialog-back">Back to the page</button></form>
+  </dialog>
+</body>
+</html>

@@ -11,6 +11,7 @@ import { createServer } from "node:http";
 import process from "node:process";
 
 import { createApp } from "../app.ts";
+import { CAPABILITIES } from "../capabilities/registry.ts";
 import type { Config } from "../config.ts";
 import { loadConfig } from "../config.ts";
 import { isMainnet } from "../core/network.ts";
@@ -47,6 +48,7 @@ function main(): void {
     config,
     log: app.log,
     policies,
+    capabilities: CAPABILITIES,
   });
 
   const server = createServer(handler);

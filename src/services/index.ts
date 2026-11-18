@@ -1,7 +1,8 @@
-// The service surface: wallet and transaction use cases, the route table and
-// the redacting logger. Depends on core + ports only.
+// The service surface: wallet and transaction use cases, the route table,
+// the redacting logger and the clock. Depends on core + ports only.
 // See docs/ARCHITECTURE.md §5.
 
+export * from "./clock.ts";
 export * from "./router.ts";
 export * from "./logger.ts";
 export * from "./wallet.ts";

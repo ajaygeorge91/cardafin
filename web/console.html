@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cardafin console</title>
+<link rel="icon" href="mark.svg">
+<link rel="stylesheet" href="console.css">
+</head>
+<body>
+<header>
+  <h1>cardafin <span>dev console</span></h1>
+  <span class="badge" id="network">…</span>
+  <span class="warn">memory adapters · imaginary money · nothing here reaches a chain</span>
+</header>
+
+<main>
+  <section id="wallet">
+    <h2>Wallet <span class="state implemented">live</span></h2>
+    <p class="desc">The v1 surface, running now against the fixture ledger.</p>
+    <div class="row">
+      <button data-get="/v1/wallet/address">address</button>
+      <button data-get="/v1/wallet/balance">balance</button>
+      <button data-get="/v1/wallet/utxos">utxos</button>
+      <button data-get="/v1/health">health</button>
+    </div>
+    <pre id="wallet-out">Pick a call above.</pre>
+  </section>
+  <section id="login">
+    <h2>Wallet login <span class="state scaffold">needs identity</span></h2>
+    <p class="desc">
+      CIP-30 in the browser, CIP-8 verification on the server. The browser half works now;
+      the server half is <code>src/capabilities/identity</code>, so the flow stops at
+      "request challenge" with a 501 until that module lands.
+    </p>
+    <div class="row">
+      <button id="detect" type="button">Detect wallets</button>
+      <span id="login-picker" class="row"></span>
+    </div>
+    <pre id="login-out">No wallet connected. Nothing is signed until you pick one.</pre>
+  </section>
+
+  <!-- One panel per capability, rendered from /console/capabilities. -->
+</main>
+
+<script type="module" src="console.mjs"></script>
+</body>
+</html>

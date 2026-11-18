@@ -1,38 +1,79 @@
 # cardafin
 
+[![check](https://github.com/ajaygeorge91/cardafin/actions/workflows/check.yml/badge.svg)](https://github.com/ajaygeorge91/cardafin/actions/workflows/check.yml)
+
 ## What it is
 
-cardafin is a Cardano wallet manager: a service layer for creating and
-restoring wallets, deriving addresses, reading balances and UTxOs, sending
-ADA and native tokens, and minting under time-locked native-script policies.
-It is not a listings database — that earlier framing (see
-`docs/OPUS-ANALYSIS.md` / `docs/FABLE-ANALYSIS.md`, July 2026) is superseded
-by `docs/ARCHITECTURE.md`.
+cardafin is a service layer that lets a web app offer **wallet-based identity**
+and **issue its own tokens on Cardano** without ever handling a key or talking
+to a chain node itself.
+
+Working today: create and restore wallets, derive addresses, read balances and
+UTxOs, send ADA and native tokens, and mint under time-locked native-script
+policies — over both a CLI and an HTTP API, with every path tested offline.
+
+Being built, as five modules that talk only through frozen interfaces:
+
+| Module | What it is |
+|---|---|
+| `identity` | CIP-8 / COSE_Sign1 verification — the server half of browser wallet login |
+| `accounts` | CIP-1852 derivation, gap-limit discovery, portfolio aggregation |
+| `assets` | CIP-14 fingerprints, CIP-25 and CIP-68 metadata, policy composition |
+| `sessions` | OAuth and wallet login landing on one linked account |
+| `networks` | provider selection, rate limiting, retry and failover |
+
+The first real consumer is [plotmap](https://plotmap.com), my own map-first
+real-estate marketplace, which records a listing's price and status history on
+chain so a buyer can verify a claim instead of trusting a screenshot — see
+`docs/PLOTMAP-BRIEF.md` for what that requires.
+
+`docs/ARCHITECTURE.md` is the binding design. `docs/archive/` holds superseded
+July 2026 explorations from when this was scoped as a verifiable database.
 
 ## Status
 
-v1 is in progress, built in the step order below (see
-`docs/ARCHITECTURE.md` §8).
+**v1 is complete** (steps 1–8 of `docs/ARCHITECTURE.md` §8): core, ports,
+memory adapters, the Lucid/Blockfrost adapter, `config.ts`, the CLI, and the
+HTTP surface. Every service has both a CLI and an HTTP route, backed by
+offline tests end to end.
 
-| Step | Deliverable | Status |
-|---|---|---|
-| 1 | skeleton, LICENSE, .gitignore, tsconfig, package.json, README stub, GitHub repo | done |
-| 2 | `src/core/*` + tests | done |
-| 3 | `src/ports/*`, `src/adapters/memory/*`, `src/services/*` + tests | done |
-| 4 | `src/adapters/lucid/*`, `src/config.ts` | done |
-| 5 | wallet ops wired in `cli.ts` | done |
-| 6 | send ADA | done |
-| 7 | policy / mint / send tokens | done |
-| 8 | `src/http/*` | done |
+**The module foundation is in place**: the port contracts the five modules
+share, fingerprinted so a change to one is deliberate; an append-only
+capability registry; a module-isolation test; published spec vectors
+(RFC 7693 BLAKE2b, all eight CIP-14 fingerprints); the offline dev console;
+and the browser half of wallet login. 468 tests, all offline.
 
-v1 is now barebone-complete: every service has both a CLI and an HTTP
-surface, backed by offline tests end to end.
+**The five modules themselves are scaffolded, not written.** Each declares its
+real route surface and answers `501 NOT_IMPLEMENTED` with a pointer to its own
+README until it is. `npm run console:probe` prints exactly which routes are
+still dark.
 
-Steps 5–7 are "done" in the sense that the commands exist, typecheck and
-have offline tests. They have **not** been run against Preview yet — see
-*Not yet smoke-tested* below for what to watch on the first real run. Step 8
-(the HTTP surface) is tested only against the in-memory adapters, for the
-same reason — `src/http/router.test.ts` never imports `src/app.ts`.
+Two honest caveats. The Lucid adapter has **not** been run against Preview yet
+— see *Not yet smoke-tested* below for what to watch on a first real run. And
+the HTTP surface is tested only against the in-memory adapters, on purpose:
+`src/http/router.test.ts` never imports `src/app.ts`.
+
+## Try it without installing anything
+
+The test suite and the dev console need **no `node_modules`, no network and no
+API key**. That is a design constraint rather than a happy accident:
+`src/core`, `src/ports`, `src/services`, `src/capabilities`, `src/fixtures`
+and `src/adapters/memory` import nothing but relative files and `node:`
+builtins, and `src/core/purity.test.ts` fails the build the moment that stops
+being true.
+
+```sh
+git clone https://github.com/ajaygeorge91/cardafin && cd cardafin
+npm test               # 468 tests, offline, nothing installed
+npm run console:probe  # every HTTP route, exercised and printed as text
+npm run console        # the same thing in a browser, at localhost:8787/console
+```
+
+`npm run console` serves the whole service over a deterministic fake ledger —
+imaginary money, no executor behind it, and no way to reach a chain even if you
+ask it to. The page is plain HTML, CSS and ES modules: no framework, no build
+step, no CDN. `npm run console:probe` is the same evidence for anyone without a
+browser, and it exits non-zero if a route stops answering.
 
 ## Architecture at a glance
 
@@ -60,6 +101,36 @@ That is exactly what `createMemoryApp(network)` in
 `src/adapters/memory/app.ts` does in one call. `createApp(config)` in
 `src/app.ts` is the same wiring with `LucidKeys`/`LucidChain`/`LucidExecutor`
 instead, and nothing in `services` or `core` changes between the two.
+
+## How a module is added
+
+One capability per folder under `src/capabilities/`: `requests.ts` (closed
+shape — unknown fields are rejected, not ignored), `plan.ts` (pure),
+`service.ts`, `routes.ts`, `capability.ts`, `memory.ts` fixtures, a README
+whose "done when" is an exact command, and tests beside them.
+
+```sh
+npm run new-capability records "Listing versions recorded on chain"
+```
+
+writes the folder with a smoke test that passes immediately, then tells you
+the one shared file to edit. That file — `src/capabilities/registry.ts` — is
+append-only by construction: a capability is an import and a list entry, and
+everything else about it lives in its own folder. Three tests hold the
+invariants that make that safe:
+
+- **`registry.test.ts`** — every folder is registered, every route path lives
+  under `/<its own capability name>`, no two capabilities claim a path, and
+  nothing shadows an existing `/v1` route. A collision is a startup error, not
+  a silently shadowed route.
+- **`isolation.test.ts`** — no capability imports another. They talk through
+  `src/ports/*` or they do not talk. Specifiers are resolved, so
+  `../../identity/service.ts` is caught, not just a literal path match.
+- **`src/ports/frozen.test.ts`** — the port contracts are fingerprinted, with
+  comments stripped so improving a doc comment is free. Changing a shared
+  interface means running `npm run freeze` and committing a one-line manifest
+  diff, which is a deliberate act rather than something that happens by
+  accident inside a feature.
 
 ## What the lucid adapter does
 
@@ -105,7 +176,14 @@ wrapped.
 
 ## Requirements
 
-Node >= 22.12.
+**Node >= 22.12**, and nothing else to run the tests.
+
+The version matters: `npm test` runs the TypeScript sources directly through
+Node's built-in type stripping (`--experimental-strip-types`, Node 22.6+) and
+built-in test runner, with no transpile step and no test framework. On an
+older Node the suite cannot run at all. `npm run typecheck` additionally wants
+`typescript` and `@types/node` from npm, which is the only thing in this repo
+that needs an install.
 
 ## CLI
 
@@ -311,13 +389,19 @@ transaction has been submitted. On a first real run, watch for:
 
 ## Test
 
-`npm test` runs `node --experimental-strip-types --test 'src/**/*.test.ts'`
-directly against the TypeScript sources with Node's built-in type stripping
-and built-in test runner (`node:test` + `node:assert/strict`). It needs no
-`node_modules`, no network access and no key: `src/core`, `src/ports`,
-`src/services` and `src/adapters/memory` all import nothing but relative
-files and `node:` builtins, which `src/core/purity.test.ts` enforces by
-grepping them. See `docs/ARCHITECTURE.md` §1 for why.
+`npm test` runs `node --experimental-strip-types --test 'src/**/*.test.ts'
+'web/**/*.test.mjs'` directly against the sources, with Node's built-in type
+stripping and built-in test runner (`node:test` + `node:assert/strict`). It
+needs no `node_modules`, no network access and no key: `src/core`,
+`src/ports`, `src/services`, `src/capabilities`, `src/fixtures` and
+`src/adapters/memory` all import nothing but relative files and `node:`
+builtins, which `src/core/purity.test.ts` enforces by grepping them. See
+`docs/ARCHITECTURE.md` §1 for why.
+
+The browser code is in the same suite. `web/*.test.mjs` drives the CIP-30
+login flow against a fake wallet and the dev console against a minimal fake
+DOM — so the half of wallet login that runs in the browser is covered by the
+same command, not by clicking.
 
 The service tests are end-to-end against `MemoryLedger` and `MemoryKeys` —
 real planning, fees, min-ADA, time-locked policies, minting and change, with
@@ -332,11 +416,18 @@ suite imports either.
 devDependency, not part of the Node runtime).
 
 ```sh
-npm test         # no install needed
+npm test               # no install needed
+npm run console:probe  # no install needed
 npm install
 npm run typecheck
-npm run check    # typecheck + test
+npm run check          # typecheck + test
 ```
+
+`npm run console:probe` starts the dev server in-process, exercises every
+static page, every console endpoint and every route each capability
+registered, prints the result as a table and exits non-zero if anything
+answers unexpectedly. A `501` is expected and shown as `todo` — that is a
+module not yet written, not a failure.
 
 ## Env vars
 

@@ -1,3 +1,10 @@
+> **Archived — superseded, kept for history.**
+>
+> This is a July 2026 design exploration from the period when cardafin was
+> still scoped as "a verifiable database on Cardano". The binding design is
+> `docs/ARCHITECTURE.md`; the current direction is wallet-based identity and
+> native tokens, decided in October 2026. Nothing below is current.
+
 # Opus analysis snapshot — cardafin
 
 Saved 2026-07-31 when the session switched from `claude-opus-4-8` to `claude-fable-5`.

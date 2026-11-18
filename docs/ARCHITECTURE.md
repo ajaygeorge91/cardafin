@@ -1,8 +1,8 @@
 # cardafin architecture
 
 Status: v1 design, 2026-11-07. Supersedes the product framing in
-`OPUS-ANALYSIS.md` and `FABLE-ANALYSIS.md` (July 2026, "blockchain as a
-database for listings"). cardafin is now a **Cardano wallet manager**: a
+`docs/archive/OPUS-ANALYSIS.md` and `docs/archive/FABLE-ANALYSIS.md`
+(July 2026, "blockchain as a database for listings"). cardafin is now a **Cardano wallet manager**: a
 service layer exposing wallet create/restore, address derivation, balance and
 UTxO queries, sending ADA, creating native-token policies, minting, and
 sending tokens. Hydra, stablecoins (USDM, not USDT), a web UI and a database
@@ -27,14 +27,33 @@ src/
     lucid/     the real thing: @lucid-evolution/lucid + Blockfrost. The ONLY
                directory allowed to import lucid or blockfrost-js.
   services/    wallet + tx use-cases. Depend on core + ports. Never on adapters.
-  http/        thin node:http surface over services (step 8). No framework.
+  capabilities/
+               one folder per feature: requests / plan / service / routes /
+               capability / memory / README / tests. A capability NEVER
+               imports another capability — they talk through ports or not at
+               all. `registry.ts` is the one shared file, and it is one line
+               per capability. See "How a module is added" in README.md.
+  fixtures/    published spec vectors (RFC 7693 BLAKE2b, CIP-14 fingerprints)
+               with their provenance in a comment. No secrets, ever.
+  http/        thin node:http surface over services and capabilities. No
+               framework. `dev-server.ts` and `probe.ts` are the offline
+               console and its no-browser equivalent.
   config.ts    env → typed Config. Network selection, mainnet opt-in.
   cli.ts       manual smoke-test CLI (wallet/balance/send/mint) for Preview.
+web/           zero-dependency browser code: the console, and the CIP-30 half
+               of wallet login. Tested by `web/*.test.mjs` under `npm test`.
 ```
 
-Dependency direction: `http → services → ports ← adapters`, and everything may
-use `core`. A lint-ish test (`src/core/purity.test.ts`) greps `src/core` and
-`src/ports` for `from "@` / `from "lucid` and fails if any appear.
+Dependency direction: `http → services → ports ← adapters`, `http →
+capabilities → ports`, and everything may use `core`. Three lint-ish tests
+keep it honest:
+
+- `src/core/purity.test.ts` — `core`, `ports`, `services`, `capabilities`,
+  `fixtures` and `adapters/memory` may import only relative paths and `node:`
+  builtins. `adapters/lucid` is the one exemption.
+- `src/capabilities/isolation.test.ts` — no capability imports another.
+- `src/ports/frozen.test.ts` — a port contract changed without a deliberate
+  `node scripts/freeze-ports.mjs` is a failure, not a surprise.
 
 Why: this repo is used for coding-evaluation tasks in a sandbox with no
 network and an unreliable npm mirror. `npm test` must run from a clean clone
@@ -43,8 +62,8 @@ with **no node_modules** and must never need a key, a node, or Blockfrost.
 ## 2. Toolchain (decided)
 
 - Node ≥ 22.12. Tests run with `node --experimental-strip-types --test
-  'src/**/*.test.ts'` — no test framework, no tsx, no vitest. Imports inside
-  `src/` therefore use explicit `.ts` extensions.
+  'src/**/*.test.ts' 'web/**/*.test.mjs'` — no test framework, no tsx, no
+  vitest. Imports inside `src/` therefore use explicit `.ts` extensions.
 - TypeScript (devDependency only) for `npm run typecheck`. `tsconfig.json` is
   self-contained: never `extends` anything. `strict`, `module: NodeNext`,
   `allowImportingTsExtensions`, `noEmit`, `erasableSyntaxOnly`,

@@ -24,7 +24,10 @@ import { CardafinError, isCardafinError } from "../core/errors.ts";
 import { validateNativeScript } from "../core/native-script.ts";
 import type { PolicyInfo } from "../core/plan.ts";
 import type { Config } from "../config.ts";
+import type { CapabilityContext, CapabilityModule } from "../capabilities/types.ts";
+import type { Clock } from "../ports/clock.ts";
 import type { Logger } from "../ports/logger.ts";
+import { systemClock } from "../services/clock.ts";
 import type { TxKind, TxService } from "../services/tx.ts";
 import type { WalletService } from "../services/wallet.ts";
 import { VERSION } from "../version.ts";
@@ -39,6 +42,15 @@ export type RouterDeps = {
    * `createHttpHandler` keeps its own map for the life of the process.
    */
   policies?: Map<string, PolicyInfo>;
+  /**
+   * The capability modules to mount under /v1. Each one declares its own
+   * paths in its own folder (see `src/capabilities/registry.ts`); this
+   * module never names a capability or a capability path. Omitted means
+   * none — the v1 surface below, and nothing else.
+   */
+  capabilities?: readonly CapabilityModule[];
+  /** Injected so anything that expires is testable without sleeping. */
+  clock?: Clock;
 };
 
 type Method = "GET" | "POST";
@@ -454,10 +466,60 @@ const PROTECTED_ROUTES: Record<string, RouteTable> = {
   "/v1/tx/send-tokens": { POST: handleSendTokens },
 };
 
+/**
+ * The paths this module serves itself, fully qualified. Exported so
+ * `src/capabilities/registry.test.ts` can prove no capability shadows one
+ * without importing the whole dispatch table.
+ */
+export const CORE_V1_PATHS: readonly string[] = ["/v1/health", ...Object.keys(PROTECTED_ROUTES)];
+
+/**
+ * Turn a capability's declared routes into dispatch entries.
+ *
+ * The one piece of translation: a capability handler gets a parsed body and
+ * the query string and nothing else — no `IncomingMessage`, no headers, no
+ * socket. Auth, body limits and error mapping stay here, which is why a
+ * capability stays testable with no HTTP server at all.
+ *
+ * A capability that collides with a v1 route, or with another capability, is
+ * a startup error rather than a silently shadowed route.
+ */
+function mountCapabilities(
+  capabilities: readonly CapabilityModule[],
+  ctx: CapabilityContext,
+): Record<string, RouteTable> {
+  const mounted: Record<string, RouteTable> = {};
+
+  for (const capability of capabilities) {
+    for (const route of capability.routes(ctx)) {
+      const path = `/v1${route.path}`;
+      if (PROTECTED_ROUTES[path] !== undefined || path === "/v1/health") {
+        throw new Error(`capability "${capability.name}" shadows the v1 route ${path}`);
+      }
+      const table = (mounted[path] ??= {});
+      if (table[route.method] !== undefined) {
+        throw new Error(`two capabilities claim ${route.method} ${path}`);
+      }
+      table[route.method] = async (c: Ctx): Promise<RouteResult> => {
+        const body =
+          c.req.method === "POST" ? parseJsonBody(await readBody(c.req, BODY_LIMIT_BYTES)) : {};
+        return await route.handler({ body, query: c.url.searchParams });
+      };
+    }
+  }
+
+  return mounted;
+}
+
 export function createHttpHandler(
   deps: RouterDeps,
 ): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
   const policies = deps.policies ?? new Map<string, PolicyInfo>();
+  const capabilityRoutes = mountCapabilities(deps.capabilities ?? [], {
+    network: deps.config.network,
+    log: deps.log,
+    clock: deps.clock ?? systemClock,
+  });
 
   return async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const start = Date.now();
@@ -476,7 +538,7 @@ export function createHttpHandler(
 
       requireAuth(req, deps.config.apiKeys);
 
-      const table = PROTECTED_ROUTES[path];
+      const table = PROTECTED_ROUTES[path] ?? capabilityRoutes[path];
       if (!table) {
         throw new HttpError(404, "NOT_FOUND", "not found");
       }

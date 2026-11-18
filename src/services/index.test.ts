@@ -17,6 +17,8 @@ test("the services barrel re-exports every use case", () => {
     "WalletService",
     "tokensOf",
     "TxService",
+    "systemClock",
+    "fixedClock",
   ]) {
     assert.ok(Object.hasOwn(services, name), `services/index.ts does not export ${name}`);
   }

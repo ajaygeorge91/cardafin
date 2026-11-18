@@ -1,0 +1,52 @@
+# Two jobs, split on purpose.
+#
+# `offline` is the claim this repo makes about itself: the whole test suite
+# and the dev console run with **nothing installed**, no network and no API
+# key. There is no `npm install` step below, and that is the point — if one
+# ever becomes necessary, this job goes red and says so.
+#
+# `typecheck` is the only thing that needs the registry, because `typescript`
+# is a devDependency and not part of the Node runtime. It is separate so that
+# a bad day at npm cannot take the headline check down with it.
+
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  offline:
+    name: tests and console, nothing installed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: no node_modules is present
+        run: test ! -d node_modules
+
+      - name: tests
+        run: npm test
+
+      - name: console surface
+        run: npm run console:probe
+
+      - name: port contracts match the manifest
+        run: node scripts/freeze-ports.mjs --check
+
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck

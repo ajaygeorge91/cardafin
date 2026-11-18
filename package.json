@@ -9,11 +9,15 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "test": "node --experimental-strip-types --test 'src/**/*.test.ts'",
+    "test": "node --experimental-strip-types --test 'src/**/*.test.ts' 'web/**/*.test.mjs'",
     "typecheck": "tsc -p tsconfig.json",
     "check": "npm run typecheck && npm test",
     "cli": "node --experimental-strip-types --env-file-if-exists=.env src/cli.ts",
-    "serve": "node --experimental-strip-types --env-file-if-exists=.env src/http/server.ts"
+    "serve": "node --experimental-strip-types --env-file-if-exists=.env src/http/server.ts",
+    "console": "node --experimental-strip-types --env-file-if-exists=.env src/http/dev-server.ts",
+    "console:probe": "node --experimental-strip-types src/http/probe.ts",
+    "freeze": "node scripts/freeze-ports.mjs",
+    "new-capability": "node scripts/new-capability.mjs"
   },
   "dependencies": {
     "@lucid-evolution/lucid": "0.8.9",
