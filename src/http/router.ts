@@ -466,23 +466,16 @@ const PROTECTED_ROUTES: Record<string, RouteTable> = {
   "/v1/tx/send-tokens": { POST: handleSendTokens },
 };
 
-/**
- * The paths this module serves itself, fully qualified. Exported so
- * `src/capabilities/registry.test.ts` can prove no capability shadows one
- * without importing the whole dispatch table.
- */
+/** The paths this module serves itself, exported so `registry.test.ts` can
+ *  check that no capability shadows one. */
 export const CORE_V1_PATHS: readonly string[] = ["/v1/health", ...Object.keys(PROTECTED_ROUTES)];
 
 /**
- * Turn a capability's declared routes into dispatch entries.
- *
- * The one piece of translation: a capability handler gets a parsed body and
- * the query string and nothing else — no `IncomingMessage`, no headers, no
- * socket. Auth, body limits and error mapping stay here, which is why a
- * capability stays testable with no HTTP server at all.
- *
- * A capability that collides with a v1 route, or with another capability, is
- * a startup error rather than a silently shadowed route.
+ * Mount a capability's declared routes. A handler gets the parsed body and
+ * the query string and nothing else — auth, body limits and error mapping
+ * stay here, so a capability needs no HTTP server to test. A path that
+ * collides with a v1 route or another capability throws at construction
+ * rather than being silently shadowed.
  */
 function mountCapabilities(
   capabilities: readonly CapabilityModule[],

@@ -1,15 +1,16 @@
-// How networks plugs into the router: one object, named once in
-// `src/capabilities/registry.ts`.
-//
-// All of this capability's wiring lives here, inside its own folder, so the
-// shared file stays one line long and five branches merge.
+// networks: see README.md for the brief. Not written yet — every route below
+// answers 501 until it is.
 
-import type { CapabilityModule } from "../types.ts";
-import { networksRoutes } from "./routes.ts";
-import { NetworksService } from "./service.ts";
+import type { CapabilityModule, CapabilityRoute } from "../types.ts";
+import { notBuilt } from "../stub.ts";
+
+const routes: readonly CapabilityRoute[] = [
+  { method: "GET", path: "/networks", handler: () => notBuilt("networks", "listing the configured networks") },
+  { method: "GET", path: "/networks/health", handler: () => notBuilt("networks", "provider health") },
+];
 
 export const networksCapability: CapabilityModule = {
   name: "networks",
-  summary: "Network and provider selection, rate limiting, failover.",
-  routes: (ctx) => networksRoutes(new NetworksService({ log: ctx.log })),
+  summary: "Network and provider selection, rate limiting and failover.",
+  routes: () => routes,
 };

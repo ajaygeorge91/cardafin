@@ -1,15 +1,17 @@
-// How sessions plugs into the router: one object, named once in
-// `src/capabilities/registry.ts`.
-//
-// All of this capability's wiring lives here, inside its own folder, so the
-// shared file stays one line long and five branches merge.
+// sessions: see README.md for the brief. Not written yet — every route below
+// answers 501 until it is.
 
-import type { CapabilityModule } from "../types.ts";
-import { sessionsRoutes } from "./routes.ts";
-import { SessionsService } from "./service.ts";
+import type { CapabilityModule, CapabilityRoute } from "../types.ts";
+import { notBuilt } from "../stub.ts";
+
+const routes: readonly CapabilityRoute[] = [
+  { method: "POST", path: "/sessions/login", handler: () => notBuilt("sessions", "wallet login") },
+  { method: "POST", path: "/sessions/link", handler: () => notBuilt("sessions", "linking an OAuth account to a wallet") },
+  { method: "GET", path: "/sessions/current", handler: () => notBuilt("sessions", "reading the current session") },
+];
 
 export const sessionsCapability: CapabilityModule = {
   name: "sessions",
-  summary: "OAuth + wallet login, and the account link between them.",
-  routes: (ctx) => sessionsRoutes(new SessionsService({ log: ctx.log })),
+  summary: "OAuth and wallet login, and the account link between them.",
+  routes: () => routes,
 };

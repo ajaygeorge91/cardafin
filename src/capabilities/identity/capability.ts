@@ -1,15 +1,16 @@
-// How identity plugs into the router: one object, named once in
-// `src/capabilities/registry.ts`.
-//
-// All of this capability's wiring lives here, inside its own folder, so the
-// shared file stays one line long and five branches merge.
+// identity: see README.md for the brief. Not written yet — every route below
+// answers 501 until it is.
 
-import type { CapabilityModule } from "../types.ts";
-import { identityRoutes } from "./routes.ts";
-import { IdentityService } from "./service.ts";
+import type { CapabilityModule, CapabilityRoute } from "../types.ts";
+import { notBuilt } from "../stub.ts";
+
+const routes: readonly CapabilityRoute[] = [
+  { method: "POST", path: "/identity/challenge", handler: () => notBuilt("identity", "issuing a login challenge") },
+  { method: "POST", path: "/identity/verify", handler: () => notBuilt("identity", "verifying a signature") },
+];
 
 export const identityCapability: CapabilityModule = {
   name: "identity",
   summary: "CIP-8 / COSE_Sign1 verification: the server half of browser wallet login.",
-  routes: (ctx) => identityRoutes(new IdentityService({ log: ctx.log })),
+  routes: () => routes,
 };

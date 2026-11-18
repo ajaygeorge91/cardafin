@@ -40,29 +40,12 @@ a test that fails if the rule is removed.
 
 ## Done when
 
-All three pass from a clean clone with no `node_modules`, no network, no key and no
-Blockfrost project id:
+`npm run check` passes with the tests you add under
+`src/capabilities/sessions/`, and `npm run console:probe` shows every `sessions`
+route answering 200 instead of 501.
 
-```
-node --test --experimental-strip-types 'src/capabilities/sessions/*.test.ts'
-npm run check
-node scripts/freeze-ports.mjs --check
-```
+To watch it work: `npm run console` and the **sessions** panel at
+http://localhost:8787/console.
 
-Then, to see it: `npm run console` and open the **sessions** panel at
-http://localhost:8787/console — or, if you have no browser, `npm run console:probe`, which
-exercises every route this capability registered and prints what each one answered. A route
-that still says `todo 501` is a route you have not written yet.
 
-## Rules this capability keeps
-
-- **Pure**: `requests.ts` and `plan.ts` import nothing but `../../core` and `../../ports`.
-  No npm, no lucid, no network, no clock of their own.
-- **Isolated**: never imports another capability. Cross-module traffic goes through a port.
-  `src/capabilities/isolation.test.ts` enforces it.
-- **Closed shape**: unknown request fields are rejected, not ignored.
-- **Ports are frozen**: if you need to change `src/ports/*.ts`, that is a deliberate act —
-  `node scripts/freeze-ports.mjs` and the manifest diff says which contract moved. Four other
-  modules depend on them.
-- **Fixtures are obviously fake**: `example.com`, placeholder words, never a value shaped like
-  a real key. Never a real address, mnemonic or project id, in code, fixtures or comments.
+See `../README.md` for the rules every module keeps.
