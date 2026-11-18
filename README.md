@@ -4,9 +4,9 @@
 
 ## What it is
 
-cardafin is a service layer that lets a web app offer **wallet-based identity**
-and **issue its own tokens on Cardano** without ever handling a key or talking
-to a chain node itself.
+cardafin is a service layer that lets a web app offer wallet-based identity and
+issue its own tokens on Cardano, without handling a key or talking to a chain
+node itself.
 
 Working today: create and restore wallets, derive addresses, read balances and
 UTxOs, send ADA and native tokens, and mint under time-locked native-script
@@ -22,58 +22,52 @@ Being built, as five modules that talk only through frozen interfaces:
 | `sessions` | OAuth and wallet login landing on one linked account |
 | `networks` | provider selection, rate limiting, retry and failover |
 
-The first real consumer is [plotmap](https://plotmap.com), my own map-first
+Its first consumer is [plotmap](https://plotmap.com), my own map-first
 real-estate marketplace, which records a listing's price and status history on
-chain so a buyer can verify a claim instead of trusting a screenshot — see
-`docs/PLOTMAP-BRIEF.md` for what that requires.
+chain so a buyer can check a claim rather than trust a screenshot.
+`docs/PLOTMAP-BRIEF.md` is what that requires.
 
 `docs/ARCHITECTURE.md` is the binding design. `docs/archive/` holds superseded
 July 2026 explorations from when this was scoped as a verifiable database.
 
 ## Status
 
-**v1 is complete** (steps 1–8 of `docs/ARCHITECTURE.md` §8): core, ports,
-memory adapters, the Lucid/Blockfrost adapter, `config.ts`, the CLI, and the
-HTTP surface. Every service has both a CLI and an HTTP route, backed by
-offline tests end to end.
+v1 is complete — core, ports, memory adapters, the Lucid/Blockfrost adapter,
+the CLI and the HTTP surface (steps 1–8 of `docs/ARCHITECTURE.md` §8). Every
+service has both a CLI command and an HTTP route.
 
-**The module foundation is in place**: the port contracts the five modules
-share, fingerprinted so a change to one is deliberate; an append-only
-capability registry; a module-isolation test; published spec vectors
-(RFC 7693 BLAKE2b, all eight CIP-14 fingerprints); the offline dev console;
-and the browser half of wallet login. 468 tests, all offline.
+The shared foundation for the five modules is in place: their port contracts,
+fingerprinted; the capability registry and its isolation test; the spec vectors
+the crypto modules need; the offline dev console; and the browser half of
+wallet login. 451 tests, all offline.
 
-**The five modules themselves are scaffolded, not written.** Each declares its
-real route surface and answers `501 NOT_IMPLEMENTED` with a pointer to its own
-README until it is. `npm run console:probe` prints exactly which routes are
-still dark.
+The modules themselves are briefs and route declarations. Every route answers
+`501 NOT_IMPLEMENTED` with a pointer to its README until it is written, and
+`npm run console:probe` shows which.
 
-Two honest caveats. The Lucid adapter has **not** been run against Preview yet
-— see *Not yet smoke-tested* below for what to watch on a first real run. And
-the HTTP surface is tested only against the in-memory adapters, on purpose:
+Two caveats. The Lucid adapter has not been run against Preview — see *Not yet
+smoke-tested* below for what to watch on a first run. And the HTTP surface is
+tested only against the in-memory adapters, deliberately:
 `src/http/router.test.ts` never imports `src/app.ts`.
 
 ## Try it without installing anything
 
-The test suite and the dev console need **no `node_modules`, no network and no
-API key**. That is a design constraint rather than a happy accident:
-`src/core`, `src/ports`, `src/services`, `src/capabilities`, `src/fixtures`
-and `src/adapters/memory` import nothing but relative files and `node:`
-builtins, and `src/core/purity.test.ts` fails the build the moment that stops
+The test suite and the dev console need no `node_modules`, no network and no
+API key. `src/core`, `src/ports`, `src/services`, `src/capabilities`,
+`src/fixtures` and `src/adapters/memory` import nothing but relative files and
+`node:` builtins, and `src/core/purity.test.ts` fails the build if that stops
 being true.
 
 ```sh
 git clone https://github.com/ajaygeorge91/cardafin && cd cardafin
-npm test               # 468 tests, offline, nothing installed
+npm test               # 451 tests, nothing installed
 npm run console:probe  # every HTTP route, exercised and printed as text
-npm run console        # the same thing in a browser, at localhost:8787/console
+npm run console        # the same, in a browser at localhost:8787/console
 ```
 
-`npm run console` serves the whole service over a deterministic fake ledger —
-imaginary money, no executor behind it, and no way to reach a chain even if you
-ask it to. The page is plain HTML, CSS and ES modules: no framework, no build
-step, no CDN. `npm run console:probe` is the same evidence for anyone without a
-browser, and it exits non-zero if a route stops answering.
+`npm run console` serves the whole service over a deterministic fake ledger.
+There is no executor behind it, so it cannot reach a chain. The page is plain
+HTML, CSS and ES modules — no framework, no build step, no CDN.
 
 ## Architecture at a glance
 
@@ -104,33 +98,28 @@ instead, and nothing in `services` or `core` changes between the two.
 
 ## How a module is added
 
-One capability per folder under `src/capabilities/`: `requests.ts` (closed
-shape — unknown fields are rejected, not ignored), `plan.ts` (pure),
-`service.ts`, `routes.ts`, `capability.ts`, `memory.ts` fixtures, a README
-whose "done when" is an exact command, and tests beside them.
+One module per folder under `src/capabilities/`. A new one starts as a brief
+and a route declaration:
 
 ```sh
 npm run new-capability records "Listing versions recorded on chain"
 ```
 
-writes the folder with a smoke test that passes immediately, then tells you
-the one shared file to edit. That file — `src/capabilities/registry.ts` — is
-append-only by construction: a capability is an import and a list entry, and
-everything else about it lives in its own folder. Three tests hold the
-invariants that make that safe:
+then two lines in `src/capabilities/registry.ts` — an import and a list entry.
+That is the only shared file, and three tests keep it safe to share:
 
 - **`registry.test.ts`** — every folder is registered, every route path lives
-  under `/<its own capability name>`, no two capabilities claim a path, and
-  nothing shadows an existing `/v1` route. A collision is a startup error, not
-  a silently shadowed route.
-- **`isolation.test.ts`** — no capability imports another. They talk through
-  `src/ports/*` or they do not talk. Specifiers are resolved, so
-  `../../identity/service.ts` is caught, not just a literal path match.
+  under `/<its own module name>`, no two modules claim a path, and nothing
+  shadows an existing `/v1` route. A collision throws at construction.
+- **`isolation.test.ts`** — no module imports another; they talk through
+  `src/ports/*`. Specifiers are resolved, so `../../identity/service.ts` is
+  caught, not just a literal path match.
 - **`src/ports/frozen.test.ts`** — the port contracts are fingerprinted, with
-  comments stripped so improving a doc comment is free. Changing a shared
-  interface means running `npm run freeze` and committing a one-line manifest
-  diff, which is a deliberate act rather than something that happens by
-  accident inside a feature.
+  comments stripped so improving a doc comment is free. Changing one means
+  `npm run freeze` and a one-line manifest diff.
+
+`src/capabilities/README.md` has the rules each module keeps: pure request
+parsing, closed request shapes, obviously-fake fixtures.
 
 ## What the lucid adapter does
 

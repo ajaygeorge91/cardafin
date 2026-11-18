@@ -1,13 +1,7 @@
-# Two jobs, split on purpose.
-#
-# `offline` is the claim this repo makes about itself: the whole test suite
-# and the dev console run with **nothing installed**, no network and no API
-# key. There is no `npm install` step below, and that is the point — if one
-# ever becomes necessary, this job goes red and says so.
-#
-# `typecheck` is the only thing that needs the registry, because `typescript`
-# is a devDependency and not part of the Node runtime. It is separate so that
-# a bad day at npm cannot take the headline check down with it.
+# `offline` installs nothing: the test suite and the dev console are meant to
+# run from a clean clone with no node_modules, and this is where that is
+# checked rather than asserted. `typecheck` is separate because typescript is
+# a devDependency, so it is the one job that needs the registry.
 
 name: check
 
