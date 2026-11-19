@@ -478,4 +478,9 @@ pure and tested. See `docs/ARCHITECTURE.md` for the full, binding spec.
 
 ## License
 
-MIT — see `LICENSE`.
+Apache License 2.0 — see `LICENSE` and `NOTICE`.
+
+Apache rather than MIT for the patent grant in §3. This repo hand-writes
+cryptography and implements CIP standards, and an explicit, irrevocable patent
+licence makes that a smaller question for anyone building on it. §5 also means
+contributions arrive under the same terms without a separate CLA.
