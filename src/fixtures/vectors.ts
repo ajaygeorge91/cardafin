@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Published specification test vectors — the values the specs themselves
 // print, not made-up data. Nothing here is personal or secret.
 //

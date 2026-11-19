@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // `npm run console` — the whole service over the in-memory adapters, plus a
 // page to watch it work.
 //

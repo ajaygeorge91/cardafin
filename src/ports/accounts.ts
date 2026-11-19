@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The read side of an account rather than a single address.
 //
 // Separate from `chain.ts` because the cost shape is different: base

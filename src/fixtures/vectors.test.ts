@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // These vectors are transcribed from specifications by hand, so the one
 // thing that can quietly go wrong is a typo — and a typo in a test vector
 // is worse than no vector, because it makes a correct implementation look

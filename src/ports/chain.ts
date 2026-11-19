@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The read side of the chain. Everything that needs a network round trip in
 // production lives behind this interface; `adapters/memory/ledger.ts` is the
 // deterministic fake and `adapters/lucid/` (step 4) is the real thing.

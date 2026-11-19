@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The client contract: turn `unknown` JSON into fully typed, bigint-normalised
 // requests, or a CardafinError. Hand-rolled on purpose — core takes no
 // dependency on a schema library. See docs/ARCHITECTURE.md §3.

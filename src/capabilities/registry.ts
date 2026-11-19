@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The capability list: one import and one entry each, both appended.
 // Everything else about a capability lives in its own folder.
 // `registry.test.ts` holds the invariants.

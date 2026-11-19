@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Command-line parsing, as a pure function.
 //
 // `parseCliArgs(argv)` takes the raw argument list and returns either a fully

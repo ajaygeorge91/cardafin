@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The cardafin CLI: a thin shell over the services, and the way the lucid
 // adapter gets smoke-tested on Preview by hand.
 //

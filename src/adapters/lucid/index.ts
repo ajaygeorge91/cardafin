@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The real adapter set: @lucid-evolution/lucid + @blockfrost/blockfrost-js.
 // The ONLY directory in cardafin allowed to import either, which is why
 // `src/core/purity.test.ts` excludes it and why no test imports it.

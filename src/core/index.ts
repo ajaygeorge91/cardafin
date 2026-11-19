@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The public surface of the pure domain core. Everything outside `src/core`
 // imports from here. See docs/ARCHITECTURE.md §3.
 

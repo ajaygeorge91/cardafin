@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // LucidKeys: the real `KeyPort` — BIP-39 seed phrases and CIP-1852
 // derivation, via `@lucid-evolution/lucid`.
 //

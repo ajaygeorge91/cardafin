@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Regenerate src/ports/frozen.json — the recorded fingerprint of every port
 // contract. Run this ONLY when you mean to change a contract:
 //

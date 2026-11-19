@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The 501 a declared-but-unwritten route answers. A finished capability has
 // no `notBuilt` left in it.
 

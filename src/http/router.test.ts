@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // End-to-end tests for the HTTP surface: a real `createHttpHandler` on a
 // real `node:http` server (ephemeral port), driven with the global `fetch`,
 // wired to `createMemoryApp` — no network, no npm, no lucid. See

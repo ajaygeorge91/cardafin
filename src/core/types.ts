@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Shared data shapes that core owns but several modules (and, from step 3,
 // `src/ports`) need. Kept separate from assets.ts to avoid import cycles.
 

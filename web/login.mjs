@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The browser half of wallet login: CIP-30 in, a DataSignature out.
 //
 // The browser never builds the message it signs. `POST /v1/identity/challenge`

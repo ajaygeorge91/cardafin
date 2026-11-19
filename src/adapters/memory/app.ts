@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // createMemoryApp: the same composition root as `src/app.ts`, built from the
 // in-memory adapters. Two uses:
 //

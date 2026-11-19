@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Blockfrost → core mapping, driven with plain objects. No npm import, no
 // network: these are the exact JSON shapes the API documents, and the point
 // of the tests is the string→bigint / string→number conversions and the

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The HTTP entry point: `npm run serve`. Wires the real adapters through
 // `createApp`, builds the routing handler, and listens. See
 // docs/ARCHITECTURE.md §9.

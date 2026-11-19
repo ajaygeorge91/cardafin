@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Fee and min-ADA *estimates*. The lucid adapter computes exact values when
 // it builds a transaction; these exist so core can reject an obviously
 // underfunded plan without a network round trip. Every number here is a

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // cardafin's public surface: the pure core, the port interfaces, the
 // services and the config loader.
 //

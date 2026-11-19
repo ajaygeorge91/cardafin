@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Sessions, and the account they belong to: one account, two kinds of
 // credential, either able to log in.
 //

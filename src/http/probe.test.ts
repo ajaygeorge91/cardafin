@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The probe is a Done-when line, so it has to fail honestly: these check
 // that the surface answers as expected today, and that a check which does
 // not is reported rather than rounded off.

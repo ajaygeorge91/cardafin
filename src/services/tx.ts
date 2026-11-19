@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // TxService: the write half of cardafin's use cases. Every method is the same
 // pipeline, which is the point — there is one place where a transaction can
 // be planned, funded, authorised and submitted.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // createMemoryApp: the test/dev composition root. These tests check the
 // wiring, not the ledger rules (services/tx.test.ts covers those) — that a
 // one-call app can actually move imaginary ADA, that its logger redacts, and

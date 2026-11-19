@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // End-to-end service tests: the real TxService wired to the real MemoryLedger
 // and MemoryKeys, with a capturing logger. No network, no npm, no key.
 //

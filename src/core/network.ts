@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Network identity: the one place that knows testnet-vs-mainnet ids, bech32
 // prefixes, Blockfrost hosts and explorer URLs. See docs/ARCHITECTURE.md §3.
 

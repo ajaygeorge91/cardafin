@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The generator runs once per capability and is then forgotten, which is
 // when it rots: the convention moves and the next scaffold is red, or worse,
 // silently unregistered.

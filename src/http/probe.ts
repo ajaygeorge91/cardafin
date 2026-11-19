@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // `npm run console:probe` — the console's checks without a browser.
 //
 // `npm run console` is the nicer way to watch a module work, but it assumes

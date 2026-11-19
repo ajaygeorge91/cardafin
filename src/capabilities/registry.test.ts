@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // registry.ts is the one file parallel work on different modules shares.
 // These are the invariants that make a one-line registration safe.
 

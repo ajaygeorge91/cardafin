@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The write side: turn a pure `TxPlan` into a submitted transaction. One
 // implementation per route — `MemoryLedger` and (step 4) `LucidExecutor` for
 // "l1", `HydraExecutor` for "hydra". See docs/ARCHITECTURE.md §4.

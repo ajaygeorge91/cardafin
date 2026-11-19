@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Everything that touches signing material. The only port whose
 // implementation holds a secret, and therefore the one seam a KMS/HSM-backed
 // signer slots into without touching services or core.

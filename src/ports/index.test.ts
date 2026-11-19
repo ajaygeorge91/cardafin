@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Ports are interfaces and type aliases: there is no runtime behaviour here
 // to assert. What *can* go wrong is an interface that cannot actually be
 // implemented, or a barrel that stops re-exporting something. So this file

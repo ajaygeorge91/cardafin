@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Multi-asset values. A `Unit` is either the literal "lovelace" or the
 // concatenation policyId(56 hex) + assetNameHex(0-64 hex). Quantities are
 // bigint. See docs/ARCHITECTURE.md §3 (`core/assets.ts`).

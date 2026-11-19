@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // LucidChain: the real `ChainReader`, backed by Blockfrost.
 //
 // Reads only — nothing here holds a key or submits anything. It talks to

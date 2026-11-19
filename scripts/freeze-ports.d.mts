@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Types for freeze-ports.mjs, so a test can import it without `any`.
 
 export declare function isContractFile(name: string): boolean;

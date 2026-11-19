@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The closed set of failure codes the whole service speaks. See
 // docs/ARCHITECTURE.md §3 (`core/errors.ts`).
 

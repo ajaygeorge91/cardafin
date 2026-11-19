@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 import { samples, verifyRecord } from './record.mjs';
 import { connectWallet, discoverWallets } from './wallet.mjs';
 

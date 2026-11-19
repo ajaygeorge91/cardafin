@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // TxPlan: a network-free, key-free description of what a transaction must do.
 // Services build plans; executors (memory / lucid / later hydra) turn plans
 // into transactions. This is what lets `hydra: true` route differently

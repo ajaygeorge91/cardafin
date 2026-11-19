@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 export function discoverWallets(cardano) {
   return Object.values(cardano ?? {})
     .filter((wallet) => typeof wallet?.name === 'string' && wallet.name.trim()

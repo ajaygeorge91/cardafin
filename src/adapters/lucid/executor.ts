@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // LucidExecutor: the "l1" `TxExecutor`. The only place in cardafin that
 // builds, signs and submits a real Cardano transaction.
 //

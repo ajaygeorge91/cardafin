@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // createHttpHandler: a thin node:http surface over WalletService and
 // TxService. No framework, no new dependencies — just a routing table, a
 // bearer-auth gate and JSON in/out. See docs/ARCHITECTURE.md §1 and §9.

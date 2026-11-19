@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The ports are the one thing several modules share, and widening a contract
 // is always type-legal for whoever widens it — so the typecheck will not
 // catch it. The contracts are fingerprinted instead.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The lucid adapter's one testable half. No lucid, no blockfrost, no network:
 // a recording fake stands in for `TxBuilder` and the assertions are about
 // which builder calls a plan produces, in what order, with what arguments.

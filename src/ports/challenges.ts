@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The nonce side of wallet login: issued, signed, then consumed exactly once.
 //
 // Two attacks this shape closes, and both need tests. Replay — the same

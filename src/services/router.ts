@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // TxRouter: picks the executor for a plan's route. The whole of cardafin's
 // Hydra story at the service layer is this class plus a `hydra?: boolean` on
 // the request. See docs/ARCHITECTURE.md §4.

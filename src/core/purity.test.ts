@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Purity gate: `src/core`, `src/ports`, `src/services`, `src/capabilities`,
 // `src/fixtures` and `src/adapters/memory` may import only relative files
 // (./ or ../) or node: builtins. No npm packages, no lucid, no blockfrost.

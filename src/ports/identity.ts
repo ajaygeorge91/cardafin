@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Verifying a CIP-30 wallet signature.
 //
 // `sessions` depends on this and on nothing else from `identity`, so the two

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // env → typed Config. Pure: `loadConfig` takes the environment as a plain
 // object argument and this module never reaches for the real one, which is
 // what makes every rule below testable (and is asserted by config.test.ts).

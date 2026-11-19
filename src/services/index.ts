@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The service surface: wallet and transaction use cases, the route table,
 // the redacting logger and the clock. Depends on core + ports only.
 // See docs/ARCHITECTURE.md §5.

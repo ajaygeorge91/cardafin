@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The two clocks: the real one, and the one tests use. Anything that expires
 // reads a Clock, so expiry is a number a test sets rather than a sleep.
 

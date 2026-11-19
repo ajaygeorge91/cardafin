@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The in-memory adapter set: a complete, deterministic implementation of
 // every port, with no npm dependency and no network. Imported by tests and by
 // nothing in `src/services` or `src/core`.

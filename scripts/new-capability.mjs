@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Scaffold a capability:
 //
 //   node scripts/new-capability.mjs records "Listing versions recorded on chain"

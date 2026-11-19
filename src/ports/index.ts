@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The port surface. Adapters implement these; services and capabilities
 // consume them. Nothing here imports anything but `../core` and other ports.
 //

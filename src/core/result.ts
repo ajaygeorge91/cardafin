@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Result: explicit success/failure without exceptions. See
 // docs/ARCHITECTURE.md §3 (`core/result.ts`).
 

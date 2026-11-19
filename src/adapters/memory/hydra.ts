@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // HydraExecutor: the "hydra" route, designed and deliberately unimplemented.
 //
 // Hydra is a state channel, not storage. Routing a cardafin transaction

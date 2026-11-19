@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // What the router knows about a capability.
 //
 // A capability declares its routes in its own folder and `registry.ts` lists

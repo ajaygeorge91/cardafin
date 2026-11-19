@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The OAuth half of login. One adapter per provider; the real ones never run
 // in a test, so this stays small enough to fake.
 

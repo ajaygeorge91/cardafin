@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // accounts: see README.md for the brief. Not written yet — every route below
 // answers 501 until it is.
 

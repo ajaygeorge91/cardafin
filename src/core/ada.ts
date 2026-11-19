@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // ADA / lovelace arithmetic. Every amount is a bigint of lovelace; the only
 // decimal handling is string<->bigint conversion at the API boundary. There is
 // deliberately no floating-point arithmetic anywhere in this file.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // CLI parsing, offline. `parseCliArgs` is pure, so every flag combination
 // cardafin accepts (and every one it must reject) is testable with no
 // process, no env, no key and no network.

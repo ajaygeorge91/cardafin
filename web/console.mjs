@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The console's whole client. No framework, no build step, no CDN — it is
 // served by src/http/dev-server.ts from a clean clone with no node_modules.
 //

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // One build, several networks and several providers. Which one serves a call
 // is config, never an import.
 //

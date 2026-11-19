@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The login flow, with a fake wallet and a fake server.
 //
 // These run under `npm test` alongside the TypeScript suite, which is the

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // TxPlan → transaction builder, as a pure function.
 //
 // This module has ZERO imports from @lucid-evolution/lucid or

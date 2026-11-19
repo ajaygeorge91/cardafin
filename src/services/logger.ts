@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The redacting logger. cardafin handles a master mnemonic, a Blockfrost
 // project id and signed transaction CBOR; none of those may ever reach a log
 // line. Rather than trusting every call site to be careful, the only Logger

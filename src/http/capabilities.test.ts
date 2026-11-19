@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The capability mount, on a real node:http server. registry.test.ts proves
 // the registry's shape; this proves the router serves it.
 

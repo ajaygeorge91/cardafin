@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Blockfrost JSON → core types. Like `translate.ts`, this file imports
 // nothing from npm: the Blockfrost response shapes are restated here as local
 // structural types so the conversions can be tested with plain objects.

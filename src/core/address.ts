@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Bech32 (BIP-173) codec and Shelley address parsing, implemented here so
 // that core keeps zero npm dependencies. See docs/ARCHITECTURE.md §3.
 //

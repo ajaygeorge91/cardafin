@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // No capability imports another. They talk through src/ports or not at all,
 // which is what keeps `node --test src/capabilities/<name>/` an honest check
 // and keeps parallel work on two modules from colliding.

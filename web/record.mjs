@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Fictional data with fixed reference hashes so the browser can check each version.
 const listingId = '6wm18g2a5x';
 const versions = [

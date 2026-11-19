@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The production wiring: a `Config` in, the service surface out.
 //
 // There is exactly one composition root in cardafin and this is it. Services

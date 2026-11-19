@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Single source of truth for the version reported by the HTTP health check.
 // Kept as a constant rather than read from package.json at startup — one
 // fewer file read on the hot path, and no risk of resolving a path relative

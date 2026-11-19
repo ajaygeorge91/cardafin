@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Durable policy storage, replacing the process-lifetime map in
 // `http/router.ts` (docs/ARCHITECTURE.md §9).
 //

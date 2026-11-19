@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // MemoryLedger: an in-memory Cardano ledger that implements both the read
 // port (`ChainReader`) and the "l1" write port (`TxExecutor`). Deterministic,
 // dependency-free and the thing every service test runs against.

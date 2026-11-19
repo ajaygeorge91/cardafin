@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Native (Timelock/multisig) scripts: the policies cardafin mints under.
 // The policy *id* is blake2b-224 of the script's CBOR, which core cannot
 // compute without a dependency — it comes through `KeyPort` (see

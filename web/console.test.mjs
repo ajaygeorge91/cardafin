@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // The console, driven against a fake DOM and a fake server.
 //
 // This is the surface a reviewer looks at, so "it renders" should not be a

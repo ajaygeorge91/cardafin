@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Ajay George
+
 // Transaction metadata: canonical JSON, sha256, UTF-8-safe 64-byte chunking,
 // and the CIP-25 NFT shape. See docs/ARCHITECTURE.md §3 (`core/metadata.ts`).
 
