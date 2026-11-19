@@ -1,0 +1,15 @@
+# The npm surface is deliberately tiny (two runtime deps, both confined to
+# src/adapters/lucid), so these should be quiet. The actions ecosystem is here
+# because a deprecated runner version is otherwise easy to miss.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

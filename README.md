@@ -1,6 +1,8 @@
 # cardafin
 
 [![check](https://github.com/ajaygeorge91/cardafin/actions/workflows/check.yml/badge.svg)](https://github.com/ajaygeorge91/cardafin/actions/workflows/check.yml)
+[![licence: Apache 2.0](https://img.shields.io/badge/licence-Apache%202.0-blue.svg)](LICENSE)
+[![node: >=22.12](https://img.shields.io/badge/node-%3E%3D22.12-brightgreen.svg)](#requirements)
 
 ## What it is
 
@@ -476,9 +478,20 @@ composition root; `cli.ts` and `http/` (step 8, see "HTTP API" above) are
 thin surfaces over services, with `cli/args.ts` keeping argument parsing
 pure and tested. See `docs/ARCHITECTURE.md` for the full, binding spec.
 
+## Contributing
+
+`CONTRIBUTING.md` has the setup, the one command, and the four rules that are
+enforced by tests rather than asked for politely. `SECURITY.md` is how to
+report a vulnerability privately, and what is a known limit rather than a bug.
+
+The five modules under `src/capabilities/` are unimplemented by design — open
+an issue before taking one on, so two people do not write the same CBOR
+decoder.
+
 ## License
 
-Apache License 2.0 — see `LICENSE` and `NOTICE`.
+Apache License 2.0 — see `LICENSE` and `NOTICE`. Every source file carries an
+SPDX header.
 
 Apache rather than MIT for the patent grant in §3. This repo hand-writes
 cryptography and implements CIP standards, and an explicit, irrevocable patent
